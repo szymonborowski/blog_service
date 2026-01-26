@@ -1,0 +1,2 @@
+- [ ] Czyste repozytorium laravel z composer require laravel/laravel
+- [ ] 

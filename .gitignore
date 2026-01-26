@@ -1,0 +1,17 @@
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+
+.env
+.env.backup
+
+/src/vendor
+/src/node_modules
+/src/public/hot
+/src/public/storage
+/src/storage/*.key
+/src/bootstrap/cache/*
+!src/bootstrap/cache/.gitignore
