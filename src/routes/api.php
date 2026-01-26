@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PostController;
 use Illuminate\Support\Facades\Route;
 // Blog API Routes
@@ -12,4 +13,7 @@ Route::prefix('v1')->group(function () {
         $request->merge(['public' => true]);
         return app(App\Http\Controllers\Api\PostController::class)->index($request);
     });
+
+    // Categories
+    Route::apiResource('categories', CategoryController::class);
 });
