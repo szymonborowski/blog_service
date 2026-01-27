@@ -7,14 +7,18 @@ use App\Models\Post;
 use App\Models\Tag;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\WithJwtAuth;
 
 class PostApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, WithJwtAuth;
 
-    /**
-     * Test listing all posts.
-     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpJwtAuth();
+    }
+
     public function test_can_list_posts(): void
     {
         Post::factory()->count(5)->create();
@@ -43,9 +47,6 @@ class PostApiTest extends TestCase
             ]);
     }
 
-    /**
-     * Test listing published posts only.
-     */
     public function test_can_list_only_published_posts(): void
     {
         Post::factory()->published()->count(3)->create();
@@ -57,9 +58,6 @@ class PostApiTest extends TestCase
         $this->assertEquals(3, count($response->json('data')));
     }
 
-    /**
-     * Test creating a new post.
-     */
     public function test_can_create_post(): void
     {
         $category = Category::factory()->create();
@@ -71,12 +69,11 @@ class PostApiTest extends TestCase
             'excerpt' => 'This is a test excerpt',
             'content' => 'This is the full content of the test post.',
             'status' => 'draft',
-            'author_id' => 1,
             'category_ids' => [$category->id],
             'tag_ids' => [$tag->id],
         ];
 
-        $response = $this->postJson('/api/v1/posts', $postData);
+        $response = $this->postJson('/api/v1/posts', $postData, $this->authHeaders());
 
         $response->assertStatus(201)
             ->assertJsonFragment([
@@ -91,20 +88,14 @@ class PostApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test validation when creating a post.
-     */
     public function test_create_post_validation_fails(): void
     {
-        $response = $this->postJson('/api/v1/posts', []);
+        $response = $this->postJson('/api/v1/posts', [], $this->authHeaders());
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['title', 'slug', 'content', 'status']);
     }
 
-    /**
-     * Test showing a single post.
-     */
     public function test_can_show_single_post(): void
     {
         $post = Post::factory()->create();
@@ -119,9 +110,6 @@ class PostApiTest extends TestCase
             ]);
     }
 
-    /**
-     * Test showing a post with relationships.
-     */
     public function test_can_show_post_with_relationships(): void
     {
         $post = Post::factory()->create();
@@ -149,9 +137,6 @@ class PostApiTest extends TestCase
             ]);
     }
 
-    /**
-     * Test updating a post.
-     */
     public function test_can_update_post(): void
     {
         $post = Post::factory()->create();
@@ -161,7 +146,7 @@ class PostApiTest extends TestCase
             'content' => 'Updated content',
         ];
 
-        $response = $this->putJson("/api/v1/posts/{$post->id}", $updateData);
+        $response = $this->putJson("/api/v1/posts/{$post->id}", $updateData, $this->authHeaders());
 
         $response->assertStatus(200)
             ->assertJsonFragment([
@@ -174,9 +159,6 @@ class PostApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test updating post categories and tags.
-     */
     public function test_can_update_post_relationships(): void
     {
         $post = Post::factory()->create();
@@ -187,7 +169,7 @@ class PostApiTest extends TestCase
 
         $response = $this->putJson("/api/v1/posts/{$post->id}", [
             'category_ids' => [$newCategory->id],
-        ]);
+        ], $this->authHeaders());
 
         $response->assertStatus(200);
 
@@ -202,14 +184,11 @@ class PostApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test deleting a post.
-     */
     public function test_can_delete_post(): void
     {
         $post = Post::factory()->create();
 
-        $response = $this->deleteJson("/api/v1/posts/{$post->id}");
+        $response = $this->deleteJson("/api/v1/posts/{$post->id}", [], $this->authHeaders());
 
         $response->assertStatus(200)
             ->assertJson([
@@ -221,9 +200,6 @@ class PostApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test filtering posts by status.
-     */
     public function test_can_filter_posts_by_status(): void
     {
         Post::factory()->published()->count(3)->create();
@@ -235,9 +211,6 @@ class PostApiTest extends TestCase
         $this->assertEquals(3, count($response->json('data')));
     }
 
-    /**
-     * Test filtering posts by category.
-     */
     public function test_can_filter_posts_by_category(): void
     {
         $category1 = Category::factory()->create();
@@ -256,9 +229,6 @@ class PostApiTest extends TestCase
         $this->assertEquals($post1->id, $response->json('data.0.id'));
     }
 
-    /**
-     * Test searching posts.
-     */
     public function test_can_search_posts(): void
     {
         Post::factory()->create(['title' => 'Laravel Tutorial']);
@@ -272,9 +242,6 @@ class PostApiTest extends TestCase
         $this->assertStringContainsString('Laravel', $response->json('data.0.title'));
     }
 
-    /**
-     * Test pagination.
-     */
     public function test_posts_are_paginated(): void
     {
         Post::factory()->count(20)->create();

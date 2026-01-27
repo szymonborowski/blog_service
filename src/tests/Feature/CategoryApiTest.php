@@ -6,14 +6,18 @@ use App\Models\Category;
 use App\Models\Post;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\WithJwtAuth;
 
 class CategoryApiTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, WithJwtAuth;
 
-    /**
-     * Test listing all categories.
-     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpJwtAuth();
+    }
+
     public function test_can_list_categories(): void
     {
         Category::factory()->count(5)->create();
@@ -35,9 +39,6 @@ class CategoryApiTest extends TestCase
             ]);
     }
 
-    /**
-     * Test creating a category.
-     */
     public function test_can_create_category(): void
     {
         $categoryData = [
@@ -45,7 +46,7 @@ class CategoryApiTest extends TestCase
             'slug' => 'technology',
         ];
 
-        $response = $this->postJson('/api/v1/categories', $categoryData);
+        $response = $this->postJson('/api/v1/categories', $categoryData, $this->authHeaders());
 
         $response->assertStatus(201)
             ->assertJsonFragment([
@@ -59,9 +60,6 @@ class CategoryApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test creating a subcategory with parent.
-     */
     public function test_can_create_subcategory_with_parent(): void
     {
         $parent = Category::factory()->create(['name' => 'Programming']);
@@ -72,7 +70,7 @@ class CategoryApiTest extends TestCase
             'parent_id' => $parent->id,
         ];
 
-        $response = $this->postJson('/api/v1/categories', $categoryData);
+        $response = $this->postJson('/api/v1/categories', $categoryData, $this->authHeaders());
 
         $response->assertStatus(201)
             ->assertJsonFragment([
@@ -86,20 +84,14 @@ class CategoryApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test validation when creating a category.
-     */
     public function test_create_category_validation_fails(): void
     {
-        $response = $this->postJson('/api/v1/categories', []);
+        $response = $this->postJson('/api/v1/categories', [], $this->authHeaders());
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['name', 'slug']);
     }
 
-    /**
-     * Test slug uniqueness validation.
-     */
     public function test_create_category_with_duplicate_slug_fails(): void
     {
         Category::factory()->create(['slug' => 'technology']);
@@ -107,15 +99,12 @@ class CategoryApiTest extends TestCase
         $response = $this->postJson('/api/v1/categories', [
             'name' => 'Tech',
             'slug' => 'technology',
-        ]);
+        ], $this->authHeaders());
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['slug']);
     }
 
-    /**
-     * Test showing a single category.
-     */
     public function test_can_show_single_category(): void
     {
         $category = Category::factory()->create();
@@ -130,9 +119,6 @@ class CategoryApiTest extends TestCase
             ]);
     }
 
-    /**
-     * Test showing category with parent and children.
-     */
     public function test_can_show_category_with_hierarchy(): void
     {
         $parent = Category::factory()->create(['name' => 'Parent']);
@@ -160,9 +146,6 @@ class CategoryApiTest extends TestCase
             ]);
     }
 
-    /**
-     * Test updating a category.
-     */
     public function test_can_update_category(): void
     {
         $category = Category::factory()->create();
@@ -171,7 +154,7 @@ class CategoryApiTest extends TestCase
             'name' => 'Updated Name',
         ];
 
-        $response = $this->putJson("/api/v1/categories/{$category->id}", $updateData);
+        $response = $this->putJson("/api/v1/categories/{$category->id}", $updateData, $this->authHeaders());
 
         $response->assertStatus(200)
             ->assertJsonFragment([
@@ -184,14 +167,11 @@ class CategoryApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test deleting a category.
-     */
     public function test_can_delete_category(): void
     {
         $category = Category::factory()->create();
 
-        $response = $this->deleteJson("/api/v1/categories/{$category->id}");
+        $response = $this->deleteJson("/api/v1/categories/{$category->id}", [], $this->authHeaders());
 
         $response->assertStatus(200)
             ->assertJson([
@@ -203,15 +183,12 @@ class CategoryApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test cannot delete category with children.
-     */
     public function test_cannot_delete_category_with_children(): void
     {
         $parent = Category::factory()->create();
         $child = Category::factory()->create(['parent_id' => $parent->id]);
 
-        $response = $this->deleteJson("/api/v1/categories/{$parent->id}");
+        $response = $this->deleteJson("/api/v1/categories/{$parent->id}", [], $this->authHeaders());
 
         $response->assertStatus(422)
             ->assertJson([
@@ -223,9 +200,6 @@ class CategoryApiTest extends TestCase
         ]);
     }
 
-    /**
-     * Test filtering root categories only.
-     */
     public function test_can_filter_root_categories(): void
     {
         $root1 = Category::factory()->create(['parent_id' => null]);
@@ -238,9 +212,6 @@ class CategoryApiTest extends TestCase
         $this->assertEquals(2, count($response->json('data')));
     }
 
-    /**
-     * Test filtering by parent_id.
-     */
     public function test_can_filter_categories_by_parent(): void
     {
         $parent = Category::factory()->create();
@@ -254,9 +225,6 @@ class CategoryApiTest extends TestCase
         $this->assertEquals(2, count($response->json('data')));
     }
 
-    /**
-     * Test searching categories by name.
-     */
     public function test_can_search_categories(): void
     {
         Category::factory()->create(['name' => 'Technology']);
@@ -270,9 +238,6 @@ class CategoryApiTest extends TestCase
         $this->assertStringContainsString('Tech', $response->json('data.0.name'));
     }
 
-    /**
-     * Test category with posts count.
-     */
     public function test_category_includes_posts_count(): void
     {
         $category = Category::factory()->create();
@@ -290,9 +255,6 @@ class CategoryApiTest extends TestCase
             ]);
     }
 
-    /**
-     * Test pagination of categories.
-     */
     public function test_categories_are_paginated(): void
     {
         Category::factory()->count(20)->create();

@@ -75,8 +75,7 @@ class PostController extends Controller
         // Generate UUID
         $validated['uuid'] = Str::uuid();
 
-        // TODO: Get author_id from authenticated SSO user
-        $validated['author_id'] = $request->get('author_id', 1);
+        $validated['author_id'] = $request->user()->id;
 
         $post = Post::create($validated);
 

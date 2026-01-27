@@ -42,10 +42,9 @@ class CommentController extends Controller
     public function store(StoreCommentRequest $request)
     {
         $validated = $request->validated();
-        
-        // TODO: Get author_id from authenticated SSO user
-        $validated['author_id'] = $request->get('author_id', 1);
-        $validated['status'] = 'pending'; // New comments are pending by default
+
+        $validated['author_id'] = $request->user()->id;
+        $validated['status'] = 'pending';
 
         $comment = Comment::create($validated);
 

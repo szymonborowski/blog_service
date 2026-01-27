@@ -8,7 +8,7 @@ class StoreTagRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // TODO: Integrate with SSO authentication
+        // Auth handled by middleware
         return true;
     }
 

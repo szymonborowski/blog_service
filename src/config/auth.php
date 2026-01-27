@@ -37,8 +37,7 @@ return [
 
     'guards' => [
         'api' => [
-            'driver' => 'passport',
-            'provider' => 'users',
+            'driver' => 'jwt',
         ],
         'web' => [
             'driver' => 'session',
@@ -115,5 +114,16 @@ return [
     */
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+
+    /*
+    |--------------------------------------------------------------------------
+    | JWT Public Key Path
+    |--------------------------------------------------------------------------
+    |
+    | Path to the public key used to verify JWT tokens from SSO.
+    |
+    */
+
+    'jwt_public_key' => env('JWT_PUBLIC_KEY_PATH', storage_path('oauth-public.key')),
 
 ];
