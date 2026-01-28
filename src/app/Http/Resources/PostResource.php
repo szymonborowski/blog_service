@@ -18,6 +18,13 @@ class PostResource extends JsonResource
             'id' => $this->id,
             'uuid' => $this->uuid,
             'author_id' => $this->author_id,
+            'author' => $this->whenLoaded('author', function () {
+                return [
+                    'id' => $this->author->user_id,
+                    'name' => $this->author->name,
+                    'email' => $this->author->email,
+                ];
+            }),
             'title' => $this->title,
             'slug' => $this->slug,
             'excerpt' => $this->excerpt,

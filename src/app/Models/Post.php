@@ -25,6 +25,11 @@ class Post extends Model
         'published_at' => 'datetime',
     ];
 
+    public function author()
+    {
+        return $this->belongsTo(Author::class, 'author_id', 'user_id');
+    }
+
     public function tags()
     {
         return $this->belongsToMany(Tag::class);
