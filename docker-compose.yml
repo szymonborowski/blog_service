@@ -20,7 +20,8 @@ services:
     volumes:
       - ./src:/var/www/html
     depends_on:
-      - blog-db
+      blog-db:
+        condition: service_healthy
     expose:
       - "9000"
     networks:
@@ -34,7 +35,14 @@ services:
       - ./src:/var/www/html
       - ./docker/dev/nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
-      - blog-app
+      blog-app:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/80'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     networks:
       - blog-internal
       - microservices
@@ -60,7 +68,8 @@ services:
     volumes:
       - ./src:/var/www/html
     depends_on:
-      - blog-db
+      blog-db:
+        condition: service_healthy
     restart: always
     networks:
       - blog-internal
@@ -78,6 +87,12 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - blog_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - blog-internal
 
