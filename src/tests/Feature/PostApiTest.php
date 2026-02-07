@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Post;
 use App\Models\Tag;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 use Tests\Traits\WithJwtAuth;
 
@@ -25,7 +26,7 @@ class PostApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/posts');
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonStructure([
                 'data' => [
                     '*' => [
@@ -54,7 +55,7 @@ class PostApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/public/posts');
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(3, count($response->json('data')));
     }
 
@@ -75,7 +76,7 @@ class PostApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/posts', $postData, $this->authHeaders());
 
-        $response->assertStatus(201)
+        $response->assertCreated()
             ->assertJsonFragment([
                 'title' => 'Test Post',
                 'slug' => 'test-post',
@@ -88,12 +89,43 @@ class PostApiTest extends TestCase
         ]);
     }
 
-    public function test_create_post_validation_fails(): void
+    #[DataProvider('invalidPostDataProvider')]
+    public function test_create_post_validation_fails(array $data, array $expectedErrors): void
     {
-        $response = $this->postJson('/api/v1/posts', [], $this->authHeaders());
+        $response = $this->postJson('/api/v1/posts', $data, $this->authHeaders());
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['title', 'slug', 'content', 'status']);
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors($expectedErrors);
+    }
+
+    public static function invalidPostDataProvider(): array
+    {
+        return [
+            'empty payload' => [
+                [],
+                ['title', 'slug', 'content', 'status'],
+            ],
+            'missing title' => [
+                ['slug' => 'test', 'content' => 'Content', 'status' => 'draft'],
+                ['title'],
+            ],
+            'missing slug' => [
+                ['title' => 'Test', 'content' => 'Content', 'status' => 'draft'],
+                ['slug'],
+            ],
+            'missing content' => [
+                ['title' => 'Test', 'slug' => 'test', 'status' => 'draft'],
+                ['content'],
+            ],
+            'invalid status' => [
+                ['title' => 'Test', 'slug' => 'test', 'content' => 'Content', 'status' => 'invalid'],
+                ['status'],
+            ],
+            'title too long' => [
+                ['title' => str_repeat('a', 256), 'slug' => 'test', 'content' => 'Content', 'status' => 'draft'],
+                ['title'],
+            ],
+        ];
     }
 
     public function test_can_show_single_post(): void
@@ -102,7 +134,7 @@ class PostApiTest extends TestCase
 
         $response = $this->getJson("/api/v1/posts/{$post->id}");
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonFragment([
                 'id' => $post->id,
                 'title' => $post->title,
@@ -121,7 +153,7 @@ class PostApiTest extends TestCase
 
         $response = $this->getJson("/api/v1/posts/{$post->id}");
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonStructure([
                 'data' => [
                     'id',
@@ -148,7 +180,7 @@ class PostApiTest extends TestCase
 
         $response = $this->putJson("/api/v1/posts/{$post->id}", $updateData, $this->authHeaders());
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonFragment([
                 'title' => 'Updated Title',
             ]);
@@ -171,7 +203,7 @@ class PostApiTest extends TestCase
             'category_ids' => [$newCategory->id],
         ], $this->authHeaders());
 
-        $response->assertStatus(200);
+        $response->assertOk();
 
         $this->assertDatabaseHas('category_post', [
             'post_id' => $post->id,
@@ -190,7 +222,7 @@ class PostApiTest extends TestCase
 
         $response = $this->deleteJson("/api/v1/posts/{$post->id}", [], $this->authHeaders());
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJson([
                 'message' => 'Post deleted successfully'
             ]);
@@ -207,7 +239,7 @@ class PostApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/posts?status=published');
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(3, count($response->json('data')));
     }
 
@@ -224,7 +256,7 @@ class PostApiTest extends TestCase
 
         $response = $this->getJson("/api/v1/posts?category_id={$category1->id}");
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(1, count($response->json('data')));
         $this->assertEquals($post1->id, $response->json('data.0.id'));
     }
@@ -237,7 +269,7 @@ class PostApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/posts?search=Laravel');
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(1, count($response->json('data')));
         $this->assertStringContainsString('Laravel', $response->json('data.0.title'));
     }
@@ -248,7 +280,7 @@ class PostApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/posts?per_page=5');
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(5, count($response->json('data')));
         $this->assertEquals(20, $response->json('meta.total'));
     }

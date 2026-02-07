@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Post;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 use Tests\Traits\WithJwtAuth;
 
@@ -24,7 +25,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/categories');
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonStructure([
                 'data' => [
                     '*' => [
@@ -48,7 +49,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/categories', $categoryData, $this->authHeaders());
 
-        $response->assertStatus(201)
+        $response->assertCreated()
             ->assertJsonFragment([
                 'name' => 'Technology',
                 'slug' => 'technology',
@@ -72,7 +73,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->postJson('/api/v1/categories', $categoryData, $this->authHeaders());
 
-        $response->assertStatus(201)
+        $response->assertCreated()
             ->assertJsonFragment([
                 'name' => 'PHP',
                 'parent_id' => $parent->id,
@@ -84,12 +85,43 @@ class CategoryApiTest extends TestCase
         ]);
     }
 
-    public function test_create_category_validation_fails(): void
+    #[DataProvider('invalidCategoryDataProvider')]
+    public function test_create_category_validation_fails(array $data, array $expectedErrors): void
     {
-        $response = $this->postJson('/api/v1/categories', [], $this->authHeaders());
+        $response = $this->postJson('/api/v1/categories', $data, $this->authHeaders());
 
-        $response->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'slug']);
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors($expectedErrors);
+    }
+
+    public static function invalidCategoryDataProvider(): array
+    {
+        return [
+            'empty payload' => [
+                [],
+                ['name', 'slug'],
+            ],
+            'missing name' => [
+                ['slug' => 'test'],
+                ['name'],
+            ],
+            'missing slug' => [
+                ['name' => 'Test'],
+                ['slug'],
+            ],
+            'name too long' => [
+                ['name' => str_repeat('a', 101), 'slug' => 'test'],
+                ['name'],
+            ],
+            'slug too long' => [
+                ['name' => 'Test', 'slug' => str_repeat('a', 101)],
+                ['slug'],
+            ],
+            'invalid parent_id' => [
+                ['name' => 'Test', 'slug' => 'test', 'parent_id' => 9999],
+                ['parent_id'],
+            ],
+        ];
     }
 
     public function test_create_category_with_duplicate_slug_fails(): void
@@ -101,7 +133,7 @@ class CategoryApiTest extends TestCase
             'slug' => 'technology',
         ], $this->authHeaders());
 
-        $response->assertStatus(422)
+        $response->assertUnprocessable()
             ->assertJsonValidationErrors(['slug']);
     }
 
@@ -111,7 +143,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->getJson("/api/v1/categories/{$category->id}");
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonFragment([
                 'id' => $category->id,
                 'name' => $category->name,
@@ -133,7 +165,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->getJson("/api/v1/categories/{$category->id}");
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonStructure([
                 'data' => [
                     'id',
@@ -156,7 +188,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->putJson("/api/v1/categories/{$category->id}", $updateData, $this->authHeaders());
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonFragment([
                 'name' => 'Updated Name',
             ]);
@@ -173,7 +205,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->deleteJson("/api/v1/categories/{$category->id}", [], $this->authHeaders());
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJson([
                 'message' => 'Category deleted successfully'
             ]);
@@ -190,7 +222,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->deleteJson("/api/v1/categories/{$parent->id}", [], $this->authHeaders());
 
-        $response->assertStatus(422)
+        $response->assertUnprocessable()
             ->assertJson([
                 'message' => 'Cannot delete category with subcategories'
             ]);
@@ -208,7 +240,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/categories?root=true');
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(2, count($response->json('data')));
     }
 
@@ -221,7 +253,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->getJson("/api/v1/categories?parent_id={$parent->id}");
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(2, count($response->json('data')));
     }
 
@@ -233,7 +265,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/categories?search=Tech');
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(1, count($response->json('data')));
         $this->assertStringContainsString('Tech', $response->json('data.0.name'));
     }
@@ -249,7 +281,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->getJson("/api/v1/categories/{$category->id}");
 
-        $response->assertStatus(200)
+        $response->assertOk()
             ->assertJsonFragment([
                 'posts_count' => 2
             ]);
@@ -261,7 +293,7 @@ class CategoryApiTest extends TestCase
 
         $response = $this->getJson('/api/v1/categories?per_page=5');
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals(5, count($response->json('data')));
         $this->assertEquals(20, $response->json('meta.total'));
     }

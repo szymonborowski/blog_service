@@ -3,41 +3,18 @@
 namespace Tests\Feature;
 
 use App\Models\Post;
-use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\WithJwtAuth;
 
 class AuthenticationTest extends TestCase
 {
-    use RefreshDatabase;
-
-    protected string $privateKey;
+    use RefreshDatabase, WithJwtAuth;
 
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->privateKey = file_get_contents(base_path('tests/keys/test-private.key'));
-
-        // Use test public key for JWT verification
-        config(['auth.jwt_public_key' => base_path('tests/keys/test-public.key')]);
-    }
-
-    protected function createToken(int $userId = 1, ?string $name = 'Test User'): string
-    {
-        return JWT::encode([
-            'iss' => 'test-sso',
-            'sub' => $userId,
-            'name' => $name,
-            'email' => 'test@example.com',
-            'iat' => time(),
-            'exp' => time() + 3600,
-        ], $this->privateKey, 'RS256');
-    }
-
-    protected function authHeaders(int $userId = 1): array
-    {
-        return ['Authorization' => 'Bearer ' . $this->createToken($userId)];
+        $this->setUpJwtAuth();
     }
 
     // --- Public endpoints (no auth required) ---
@@ -48,7 +25,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->getJson('/api/v1/public/posts');
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertCount(3, $response->json('data'));
     }
 
@@ -58,7 +35,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->getJson('/api/v1/posts');
 
-        $response->assertStatus(200);
+        $response->assertOk();
     }
 
     public function test_can_show_post_without_token(): void
@@ -67,7 +44,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->getJson("/api/v1/posts/{$post->id}");
 
-        $response->assertStatus(200);
+        $response->assertOk();
     }
 
     // --- Protected endpoints (auth required) ---
@@ -81,7 +58,7 @@ class AuthenticationTest extends TestCase
             'status' => 'draft',
         ]);
 
-        $response->assertStatus(401);
+        $response->assertUnauthorized();
     }
 
     public function test_can_create_post_with_valid_token(): void
@@ -93,7 +70,7 @@ class AuthenticationTest extends TestCase
             'status' => 'draft',
         ], $this->authHeaders(42));
 
-        $response->assertStatus(201);
+        $response->assertCreated();
         $this->assertEquals(42, $response->json('data.author_id'));
     }
 
@@ -105,7 +82,7 @@ class AuthenticationTest extends TestCase
             'title' => 'Updated Title',
         ]);
 
-        $response->assertStatus(401);
+        $response->assertUnauthorized();
     }
 
     public function test_can_update_post_with_valid_token(): void
@@ -116,7 +93,7 @@ class AuthenticationTest extends TestCase
             'title' => 'Updated Title',
         ], $this->authHeaders());
 
-        $response->assertStatus(200);
+        $response->assertOk();
         $this->assertEquals('Updated Title', $response->json('data.title'));
     }
 
@@ -126,7 +103,7 @@ class AuthenticationTest extends TestCase
 
         $response = $this->deleteJson("/api/v1/posts/{$post->id}");
 
-        $response->assertStatus(401);
+        $response->assertUnauthorized();
     }
 
     public function test_can_delete_post_with_valid_token(): void
@@ -135,18 +112,17 @@ class AuthenticationTest extends TestCase
 
         $response = $this->deleteJson("/api/v1/posts/{$post->id}", [], $this->authHeaders());
 
-        $response->assertStatus(200);
+        $response->assertOk();
     }
 
     // --- Invalid token scenarios ---
 
     public function test_returns_401_with_expired_token(): void
     {
-        $expiredToken = JWT::encode([
-            'sub' => 1,
+        $expiredToken = $this->createTestToken(overrides: [
             'iat' => time() - 7200,
             'exp' => time() - 3600,
-        ], $this->privateKey, 'RS256');
+        ]);
 
         $response = $this->postJson('/api/v1/posts', [
             'title' => 'Test',
@@ -155,7 +131,7 @@ class AuthenticationTest extends TestCase
             'status' => 'draft',
         ], ['Authorization' => 'Bearer ' . $expiredToken]);
 
-        $response->assertStatus(401);
+        $response->assertUnauthorized();
     }
 
     public function test_returns_401_with_malformed_token(): void
@@ -167,7 +143,7 @@ class AuthenticationTest extends TestCase
             'status' => 'draft',
         ], ['Authorization' => 'Bearer invalid.token.here']);
 
-        $response->assertStatus(401);
+        $response->assertUnauthorized();
     }
 
     public function test_user_id_from_token_is_used_as_author_id(): void
@@ -179,7 +155,7 @@ class AuthenticationTest extends TestCase
             'status' => 'draft',
         ], $this->authHeaders(123));
 
-        $response->assertStatus(201);
+        $response->assertCreated();
         $this->assertDatabaseHas('posts', [
             'title' => 'Test Post',
             'author_id' => 123,
