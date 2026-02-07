@@ -8,6 +8,9 @@
 .env
 .env.backup
 
+# Kubernetes secrets (use secret.example.yaml as template)
+k8s/secret.yaml
+
 /src/vendor
 /src/node_modules
 /src/public/hot
