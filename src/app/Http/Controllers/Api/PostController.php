@@ -26,6 +26,11 @@ class PostController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Filter by slug (exact match)
+        if ($request->filled('slug')) {
+            $query->where('slug', $request->slug);
+        }
+
         // Filter by category
         if ($request->has('category_id')) {
             $query->whereHas('categories', function ($q) use ($request) {
