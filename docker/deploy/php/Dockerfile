@@ -30,6 +30,7 @@ RUN apk add --no-cache \
         icu-dev \
         oniguruma-dev \
         libxml2-dev \
+        linux-headers \
     && docker-php-ext-install -j"$(nproc)" \
         pdo_mysql mbstring zip exif pcntl bcmath intl sockets \
     && apk del .build-deps \
