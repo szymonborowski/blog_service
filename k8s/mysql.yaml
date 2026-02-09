@@ -13,8 +13,8 @@ type: Opaque
 stringData:
   MYSQL_DATABASE: "blog"
   MYSQL_USER: "blog"
-  MYSQL_PASSWORD: "CHANGE_ME"
-  MYSQL_ROOT_PASSWORD: "CHANGE_ME"
+  MYSQL_PASSWORD: "SXBVj+BZ5X6YigKciQmH2F+02FnvLNgqSuDNKc6gUm4="
+  MYSQL_ROOT_PASSWORD: "SXBVj+BZ5X6YigKciQmH2F+02FnvLNgqSuDNKc6gUm4="
 ---
 apiVersion: v1
 kind: Service
