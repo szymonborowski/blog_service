@@ -29,6 +29,29 @@ spec:
           volumeMounts:
             - name: public-files
               mountPath: /shared/public
+        - name: migrate-and-seed
+          image: ghcr.io/decybell/microservices-blog:v0.0.1
+          command:
+            - sh
+            - -c
+            - |
+              echo "Running migrations..."
+              php artisan migrate --force
+              echo "Running seeds..."
+              php artisan db:seed --force
+              echo "Database initialization complete!"
+          envFrom:
+            - configMapRef:
+                name: blog-config
+            - secretRef:
+                name: blog-secret
+          resources:
+            limits:
+              cpu: 200m
+              memory: 256Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
       containers:
         - name: php-fpm
           image: ghcr.io/decybell/microservices-blog:v0.0.1
