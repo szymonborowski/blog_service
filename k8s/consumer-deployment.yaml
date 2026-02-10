@@ -22,7 +22,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: consumer
-          image: ghcr.io/decybell/microservices-blog:v0.0.1
+          image: ghcr.io/szymonborowski/microservices-blog:v0.0.1
           args: ["php", "artisan", "rabbitmq:consume-users"]
           envFrom:
             - configMapRef:
