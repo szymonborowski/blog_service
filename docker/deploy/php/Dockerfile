@@ -62,8 +62,8 @@ RUN composer install \
 FROM php-base AS php-runtime
 
 LABEL org.opencontainers.image.title="blog-service" \
-      org.opencontainers.image.authors="decybell" \
-      org.opencontainers.image.source="https://github.com/decybell/portfolio"
+      org.opencontainers.image.authors="szymonborowski" \
+      org.opencontainers.image.source="https://github.com/szymonborowski/blog_service"
 
 # PHP-FPM healthcheck endpoint
 RUN printf '[www]\nping.path = /ping\nping.response = pong\n' \
