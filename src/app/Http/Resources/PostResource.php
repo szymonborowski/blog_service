@@ -4,7 +4,43 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use OpenApi\Attributes as OA;
 
+#[OA\Schema(
+    schema: 'Post',
+    title: 'Post',
+    description: 'Blog post resource',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'uuid', type: 'string', format: 'uuid', example: '550e8400-e29b-41d4-a716-446655440000'),
+        new OA\Property(property: 'author_id', type: 'integer', example: 1),
+        new OA\Property(property: 'author', type: 'object', properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'email', type: 'string'),
+        ]),
+        new OA\Property(property: 'title', type: 'string', example: 'My First Post'),
+        new OA\Property(property: 'slug', type: 'string', example: 'my-first-post'),
+        new OA\Property(property: 'excerpt', type: 'string', nullable: true, example: 'Short summary...'),
+        new OA\Property(property: 'content', type: 'string', example: 'Full post content...'),
+        new OA\Property(property: 'status', type: 'string', enum: ['draft', 'published', 'archived'], example: 'published'),
+        new OA\Property(property: 'published_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'categories', type: 'array', items: new OA\Items(properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'slug', type: 'string'),
+        ])),
+        new OA\Property(property: 'tags', type: 'array', items: new OA\Items(properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'slug', type: 'string'),
+        ])),
+        new OA\Property(property: 'comments_count', type: 'integer', example: 5),
+    ]
+)]
 class PostResource extends JsonResource
 {
     /**

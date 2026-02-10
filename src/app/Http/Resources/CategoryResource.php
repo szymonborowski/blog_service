@@ -4,7 +4,31 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use OpenApi\Attributes as OA;
 
+#[OA\Schema(
+    schema: 'Category',
+    title: 'Category',
+    description: 'Blog category resource',
+    type: 'object',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer', example: 1),
+        new OA\Property(property: 'name', type: 'string', example: 'Technology'),
+        new OA\Property(property: 'slug', type: 'string', example: 'technology'),
+        new OA\Property(property: 'parent_id', type: 'integer', nullable: true, example: null),
+        new OA\Property(property: 'parent', type: 'object', nullable: true, properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'slug', type: 'string'),
+        ]),
+        new OA\Property(property: 'children', type: 'array', items: new OA\Items(properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'slug', type: 'string'),
+        ])),
+        new OA\Property(property: 'posts_count', type: 'integer', example: 10),
+    ]
+)]
 class CategoryResource extends JsonResource
 {
     /**
