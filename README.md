@@ -17,7 +17,7 @@ Frontend / Admin ──▶ Traefik ──▶ Nginx ──▶ PHP-FPM (Laravel)
 
 ## Tech Stack
 
-- **Backend:** PHP 8.2 / Laravel 12
+- **Backend:** PHP 8.5 / Laravel 12
 - **Database:** MySQL 8
 - **Auth:** Stateless JWT (custom guard)
 - **Message queue:** RabbitMQ (php-amqplib)
