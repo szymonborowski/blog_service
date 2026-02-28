@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Author;
+use App\Services\UserEventsMessageHandler;
 use Illuminate\Console\Command;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 
@@ -13,6 +13,12 @@ class ConsumeUserEvents extends Command
     protected $description = 'Consume user events from RabbitMQ queue';
 
     private ?AMQPStreamConnection $connection = null;
+
+    public function __construct(
+        private readonly UserEventsMessageHandler $messageHandler
+    ) {
+        parent::__construct();
+    }
 
     public function handle(): int
     {
@@ -52,48 +58,18 @@ class ConsumeUserEvents extends Command
     private function processMessage($message): void
     {
         try {
+            $this->messageHandler->handle($message->body);
+
             $data = json_decode($message->body, true);
-
-            if (!$data) {
-                $this->error('Invalid JSON message');
-                $message->nack();
-                return;
-            }
-
-            $action = $data['action'] ?? null;
-            $userData = $data['user'] ?? null;
-
-            if (!$action || !$userData) {
-                $this->error('Missing action or user data');
-                $message->nack();
-                return;
-            }
-
-            $this->info("Processing {$action} event for user: {$userData['email']}");
-
-            match ($action) {
-                'created', 'updated' => $this->upsertAuthor($userData),
-                default => $this->warn("Unknown action: {$action}"),
-            };
-
+            $action = $data['action'] ?? 'unknown';
+            $userData = $data['user'] ?? [];
+            $this->info("Processing {$action} event for user: " . ($userData['email'] ?? 'unknown'));
             $message->ack();
             $this->info("Successfully processed {$action} event");
         } catch (\Exception $e) {
             $this->error("Error processing message: {$e->getMessage()}");
             $message->nack();
         }
-    }
-
-    private function upsertAuthor(array $userData): void
-    {
-        Author::updateOrCreate(
-            ['user_id' => $userData['id']],
-            [
-                'name' => $userData['name'],
-                'email' => $userData['email'],
-                'user_created_at' => $userData['created_at'] ?? null,
-            ]
-        );
     }
 
     private function getConnection(): AMQPStreamConnection
