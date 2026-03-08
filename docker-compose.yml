@@ -1,6 +1,5 @@
 services:
   blog-app:
-    container_name: blog-app
     build:
       context: .
       dockerfile: docker/dev/php/Dockerfile
@@ -29,7 +28,6 @@ services:
       - microservices
 
   blog-nginx:
-    container_name: blog-nginx
     image: nginx:1.27
     volumes:
       - ./src:/var/www/html
@@ -55,7 +53,6 @@ services:
       - microservices
 
   blog-consumer:
-    container_name: blog-consumer
     build:
       context: .
       dockerfile: docker/dev/php/Dockerfile
@@ -83,7 +80,6 @@ services:
       - microservices
 
   blog-db:
-    container_name: blog-db
     image: mysql:8
     ports:
       - "127.0.0.1:3308:3306"
