@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\SlideController;
 use App\Http\Controllers\Api\TagController;
+use App\Http\Middleware\InternalApiKey;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -16,6 +18,9 @@ Route::prefix('v1')->group(function () {
         $request->merge(['public' => true]);
         return app(CommentController::class)->index($request);
     });
+
+    // Public slides endpoint
+    Route::get('slides', [SlideController::class, 'index']);
 
     // Read-only endpoints (no auth required)
     Route::get('posts', [PostController::class, 'index']);
@@ -53,4 +58,14 @@ Route::prefix('v1')->group(function () {
         Route::patch('comments/{comment}/approve', [CommentController::class, 'approve']);
         Route::patch('comments/{comment}/reject', [CommentController::class, 'reject']);
     });
+});
+
+// Internal routes for service-to-service communication (Admin)
+Route::middleware([InternalApiKey::class])->prefix('internal')->group(function () {
+    Route::get('slides', [SlideController::class, 'indexAll']);
+    Route::patch('slides/reorder', [SlideController::class, 'reorder']);
+    Route::get('slides/{slide}', [SlideController::class, 'show']);
+    Route::post('slides', [SlideController::class, 'store']);
+    Route::match(['put', 'patch'], 'slides/{slide}', [SlideController::class, 'update']);
+    Route::delete('slides/{slide}', [SlideController::class, 'destroy']);
 });
