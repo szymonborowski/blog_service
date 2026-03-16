@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   blog-app:
     build:
@@ -26,6 +32,7 @@ services:
     networks:
       - blog-internal
       - microservices
+    logging: *default-logging
 
   blog-nginx:
     image: nginx:1.27
@@ -51,6 +58,7 @@ services:
       - blog-internal
       - web
       - microservices
+    logging: *default-logging
 
   blog-consumer:
     build:
@@ -78,6 +86,7 @@ services:
     networks:
       - blog-internal
       - microservices
+    logging: *default-logging
 
   blog-db:
     image: mysql:8
@@ -98,6 +107,7 @@ services:
       start_period: 30s
     networks:
       - blog-internal
+    logging: *default-logging
 
 networks:
   blog-internal:
