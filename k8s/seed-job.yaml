@@ -1,0 +1,49 @@
+# =============================================================================
+# Blog — jednorazowy seed Job
+# Tworzy kategorie, tagi i przykładowe posty (dane demo/dev).
+# Na produkcji użyj scripts/seed-blog-posts.sql zamiast tego Joba.
+#
+# Uruchomienie (raz, przy pierwszym setupie klastra):
+#   kubectl apply -f blog/k8s/seed-job.yaml -n portfolio
+#   kubectl wait --for=condition=complete job/blog-seed -n portfolio --timeout=120s
+#   kubectl delete -f blog/k8s/seed-job.yaml -n portfolio
+# =============================================================================
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: blog-seed
+  namespace: portfolio
+  labels:
+    app.kubernetes.io/name: blog
+    app.kubernetes.io/component: seed
+    app.kubernetes.io/part-of: portfolio
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: seed
+          image: ghcr.io/szymonborowski/portfolio-blog:sha-latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              echo "Seeding blog (categories, tags, sample posts)..."
+              php artisan db:seed --class=BlogSeeder --force
+              echo "Done."
+          envFrom:
+            - configMapRef:
+                name: blog-config
+            - secretRef:
+                name: blog-secret
+          resources:
+            limits:
+              memory: 256Mi
+            requests:
+              cpu: 10m
+              memory: 128Mi
