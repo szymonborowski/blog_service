@@ -22,7 +22,8 @@ class UpdatePostRequest extends FormRequest
      */
     public function rules(): array
     {
-        $postId = $this->route('post');
+        $post = $this->route('post');
+        $postId = $post instanceof \App\Models\Post ? $post->id : $post;
 
         return [
             'title' => ['sometimes', 'required', 'string', 'max:255'],

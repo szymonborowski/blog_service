@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\FeaturedPostController;
+use App\Http\Controllers\Api\InternalPostController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\SlideController;
 use App\Http\Controllers\Api\TagController;
@@ -21,6 +23,9 @@ Route::prefix('v1')->group(function () {
 
     // Public slides endpoint
     Route::get('slides', [SlideController::class, 'index']);
+
+    // Public featured posts endpoint
+    Route::get('featured-posts', [FeaturedPostController::class, 'index']);
 
     // Read-only endpoints (no auth required)
     Route::get('posts', [PostController::class, 'index']);
@@ -62,10 +67,36 @@ Route::prefix('v1')->group(function () {
 
 // Internal routes for service-to-service communication (Admin)
 Route::middleware([InternalApiKey::class])->prefix('internal')->group(function () {
+    // Slides
     Route::get('slides', [SlideController::class, 'indexAll']);
     Route::patch('slides/reorder', [SlideController::class, 'reorder']);
     Route::get('slides/{slide}', [SlideController::class, 'show']);
     Route::post('slides', [SlideController::class, 'store']);
     Route::match(['put', 'patch'], 'slides/{slide}', [SlideController::class, 'update']);
     Route::delete('slides/{slide}', [SlideController::class, 'destroy']);
+
+    // Posts
+    Route::get('posts', [PostController::class, 'index']);
+    Route::get('posts/{post}', [PostController::class, 'show']);
+    Route::post('posts', [InternalPostController::class, 'store']);
+    Route::match(['put', 'patch'], 'posts/{post}', [PostController::class, 'update']);
+    Route::delete('posts/{post}', [PostController::class, 'destroy']);
+
+    // Categories
+    Route::get('categories', [CategoryController::class, 'index']);
+    Route::post('categories', [CategoryController::class, 'store']);
+    Route::match(['put', 'patch'], 'categories/{category}', [CategoryController::class, 'update']);
+    Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
+
+    // Tags
+    Route::get('tags', [TagController::class, 'index']);
+    Route::post('tags', [TagController::class, 'store']);
+    Route::match(['put', 'patch'], 'tags/{tag}', [TagController::class, 'update']);
+    Route::delete('tags/{tag}', [TagController::class, 'destroy']);
+
+    // Featured posts (Most Important Posts widget)
+    Route::get('featured-posts', [FeaturedPostController::class, 'indexAll']);
+    Route::post('featured-posts', [FeaturedPostController::class, 'store']);
+    Route::patch('featured-posts/reorder', [FeaturedPostController::class, 'reorder']);
+    Route::delete('featured-posts/{featuredPost}', [FeaturedPostController::class, 'destroy']);
 });
