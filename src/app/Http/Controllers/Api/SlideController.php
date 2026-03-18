@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateSlideRequest;
 use App\Http\Resources\SlideResource;
 use App\Models\Slide;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use OpenApi\Attributes as OA;
 
 class SlideController extends Controller
@@ -27,7 +28,9 @@ class SlideController extends Controller
     )]
     public function index()
     {
-        $slides = Slide::active()->ordered()->get();
+        $slides = Cache::remember('slides.active', 300, function () {
+            return Slide::active()->ordered()->get();
+        });
 
         return SlideResource::collection($slides);
     }
@@ -90,6 +93,7 @@ class SlideController extends Controller
     public function store(StoreSlideRequest $request)
     {
         $slide = Slide::create($request->validated());
+        Cache::forget('slides.active');
 
         return (new SlideResource($slide))->response()->setStatusCode(201);
     }
@@ -122,6 +126,7 @@ class SlideController extends Controller
     public function update(UpdateSlideRequest $request, Slide $slide)
     {
         $slide->update($request->validated());
+        Cache::forget('slides.active');
 
         return new SlideResource($slide);
     }
@@ -142,6 +147,7 @@ class SlideController extends Controller
     public function destroy(Slide $slide)
     {
         $slide->delete();
+        Cache::forget('slides.active');
 
         return response()->json([
             'message' => 'Slide deleted successfully',
@@ -179,6 +185,7 @@ class SlideController extends Controller
         foreach ($request->slides as $item) {
             Slide::where('id', $item['id'])->update(['position' => $item['position']]);
         }
+        Cache::forget('slides.active');
 
         return response()->json([
             'message' => 'Slides reordered successfully',
