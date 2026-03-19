@@ -4,8 +4,8 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\FeaturedPostController;
 use App\Http\Controllers\Api\InternalPostController;
+use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\PostController;
-use App\Http\Controllers\Api\SlideController;
 use App\Http\Controllers\Api\TagController;
 use App\Http\Middleware\InternalApiKey;
 use Illuminate\Support\Facades\Route;
@@ -21,11 +21,12 @@ Route::prefix('v1')->group(function () {
         return app(CommentController::class)->index($request);
     });
 
-    // Public slides endpoint
-    Route::get('slides', [SlideController::class, 'index']);
-
     // Public featured posts endpoint
     Route::get('featured-posts', [FeaturedPostController::class, 'index']);
+
+    // Newsletter
+    Route::post('newsletter/subscribe', [NewsletterController::class, 'subscribe']);
+    Route::post('newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe']);
 
     // Read-only endpoints (no auth required)
     Route::get('posts', [PostController::class, 'index']);
@@ -67,14 +68,6 @@ Route::prefix('v1')->group(function () {
 
 // Internal routes for service-to-service communication (Admin)
 Route::middleware([InternalApiKey::class])->prefix('internal')->group(function () {
-    // Slides
-    Route::get('slides', [SlideController::class, 'indexAll']);
-    Route::patch('slides/reorder', [SlideController::class, 'reorder']);
-    Route::get('slides/{slide}', [SlideController::class, 'show']);
-    Route::post('slides', [SlideController::class, 'store']);
-    Route::match(['put', 'patch'], 'slides/{slide}', [SlideController::class, 'update']);
-    Route::delete('slides/{slide}', [SlideController::class, 'destroy']);
-
     // Posts
     Route::get('posts', [PostController::class, 'index']);
     Route::get('posts/{post}', [PostController::class, 'show']);

@@ -8,25 +8,23 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('slides', function (Blueprint $table) {
-            $table->id();
-            $table->string('title');
-            $table->enum('type', ['image', 'html']);
-            $table->string('image_url', 2048)->nullable();
-            $table->longText('html_content')->nullable();
-            $table->string('link_url', 2048)->nullable();
-            $table->string('link_text')->nullable();
-            $table->unsignedInteger('position')->default(0);
-            $table->boolean('is_active')->default(true);
-            $table->timestamps();
-            $table->softDeletes();
-
-            $table->index(['is_active', 'position']);
-        });
+        Schema::dropIfExists('slides');
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('slides');
+        Schema::create('slides', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->enum('type', ['image', 'html']);
+            $table->string('image_url')->nullable();
+            $table->text('html_content')->nullable();
+            $table->string('link_url')->nullable();
+            $table->string('link_text')->nullable();
+            $table->integer('position')->default(0);
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+            $table->softDeletes();
+        });
     }
 };
