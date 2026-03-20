@@ -24,7 +24,10 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'slug', type: 'string', example: 'my-first-post'),
         new OA\Property(property: 'excerpt', type: 'string', nullable: true, example: 'Short summary...'),
         new OA\Property(property: 'content', type: 'string', example: 'Full post content...'),
+        new OA\Property(property: 'cover_image', type: 'string', nullable: true, example: '/images/posts/my-first-post.jpg'),
         new OA\Property(property: 'status', type: 'string', enum: ['draft', 'published', 'archived'], example: 'published'),
+        new OA\Property(property: 'locale', type: 'string', enum: ['pl', 'en'], example: 'pl'),
+        new OA\Property(property: 'version', type: 'integer', example: 1),
         new OA\Property(property: 'published_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
@@ -32,6 +35,7 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'id', type: 'integer'),
             new OA\Property(property: 'name', type: 'string'),
             new OA\Property(property: 'slug', type: 'string'),
+            new OA\Property(property: 'color', type: 'string', nullable: true),
         ])),
         new OA\Property(property: 'tags', type: 'array', items: new OA\Items(properties: [
             new OA\Property(property: 'id', type: 'integer'),
@@ -65,7 +69,10 @@ class PostResource extends JsonResource
             'slug' => $this->slug,
             'excerpt' => $this->excerpt,
             'content' => $this->content,
-            'status' => $this->status,
+            'cover_image' => $this->cover_image,
+            'status'  => $this->status,
+            'locale'  => $this->locale,
+            'version' => $this->version,
             'published_at' => $this->published_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
@@ -74,6 +81,7 @@ class PostResource extends JsonResource
                     'id' => $cat->id,
                     'name' => $cat->name,
                     'slug' => $cat->slug,
+                    'color' => $cat->color,
                 ]);
             }),
             'tags' => $this->whenLoaded('tags', function () {

@@ -25,6 +25,7 @@ class PostController extends Controller
             new OA\Parameter(name: 'tag_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'search', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'public', in: 'query', required: false, schema: new OA\Schema(type: 'boolean')),
+            new OA\Parameter(name: 'locale', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['pl', 'en'])),
             new OA\Parameter(name: 'sort_by', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'created_at')),
             new OA\Parameter(name: 'sort_order', in: 'query', required: false, schema: new OA\Schema(type: 'string', default: 'desc', enum: ['asc', 'desc'])),
             new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 15)),
@@ -77,6 +78,11 @@ class PostController extends Controller
             });
         }
 
+        // Filter by locale
+        if ($request->filled('locale')) {
+            $query->where('locale', $request->locale);
+        }
+
         // Only published posts for public API
         if ($request->has('public') && $request->public) {
             $query->published();
@@ -121,7 +127,9 @@ class PostController extends Controller
         $validated = $request->validated();
 
         // Generate UUID
-        $validated['uuid'] = Str::uuid();
+        $validated['uuid']    = Str::uuid();
+        $validated['locale']  = $validated['locale'] ?? 'pl';
+        $validated['version'] = 1;
 
         $validated['author_id'] = $request->user()->id;
 

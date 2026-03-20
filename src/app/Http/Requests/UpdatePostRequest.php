@@ -32,6 +32,7 @@ class UpdatePostRequest extends FormRequest
             'content' => ['sometimes', 'required', 'string'],
             'status' => ['sometimes', 'required', 'in:draft,published,archived'],
             'published_at' => ['nullable', 'date'],
+            'locale'       => ['nullable', 'in:pl,en'],
             'category_ids' => ['nullable', 'array'],
             'category_ids.*' => ['exists:categories,id'],
             'tag_ids' => ['nullable', 'array'],

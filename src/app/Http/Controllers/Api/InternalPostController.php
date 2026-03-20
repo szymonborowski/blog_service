@@ -13,7 +13,9 @@ class InternalPostController extends PostController
     {
         $validated = $request->validated();
 
-        $validated['uuid'] = Str::uuid();
+        $validated['uuid']    = Str::uuid();
+        $validated['locale']  = $validated['locale'] ?? 'pl';
+        $validated['version'] = 1;
         $validated['author_id'] = $request->input('author_id', 1);
 
         $post = Post::create($validated);

@@ -17,13 +17,24 @@ class Post extends Model
         'slug',
         'excerpt',
         'content',
+        'cover_image',
         'status',
+        'locale',
+        'version',
         'published_at',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
+        'version'      => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::updating(function (Post $post) {
+            $post->version = $post->getOriginal('version', 1) + 1;
+        });
+    }
 
     public function author()
     {
