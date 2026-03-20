@@ -27,6 +27,7 @@ class UpdateCategoryRequest extends FormRequest
         return [
             'name' => ['sometimes', 'required', 'string', 'max:100'],
             'slug' => ['sometimes', 'required', 'string', 'max:100', 'unique:categories,slug,' . $categoryId],
+            'color' => ['nullable', 'string', 'max:20'],
             'parent_id' => ['nullable', 'exists:categories,id'],
         ];
     }
