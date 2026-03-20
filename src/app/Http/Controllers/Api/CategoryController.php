@@ -33,9 +33,16 @@ class CategoryController extends Controller
     )]
     public function index(Request $request)
     {
+        $locale = $request->filled('locale') ? $request->locale : null;
+
         $query = Category::query()
             ->with(['parent', 'children'])
-            ->withCount('posts');
+            ->withCount(['posts' => function ($q) use ($locale) {
+                $q->where('status', 'published');
+                if ($locale) {
+                    $q->where('locale', $locale);
+                }
+            }]);
 
         // Filter: only root categories (no parent)
         if ($request->has('root') && $request->root) {
