@@ -24,6 +24,7 @@ services:
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - ./src:/var/www/html
+      - blog_vendor:/var/www/html/vendor
     depends_on:
       blog-db:
         condition: service_healthy
@@ -89,6 +90,7 @@ services:
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - ./src:/var/www/html
+      - blog_vendor:/var/www/html/vendor
     depends_on:
       blog-db:
         condition: service_healthy
@@ -139,3 +141,4 @@ networks:
 
 volumes:
   blog_db_data:
+  blog_vendor:
