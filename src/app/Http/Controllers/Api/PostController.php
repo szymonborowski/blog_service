@@ -8,6 +8,7 @@ use App\Http\Requests\UpdatePostRequest;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use OpenApi\Attributes as OA;
 
@@ -19,6 +20,7 @@ class PostController extends Controller
         description: 'List posts with filtering, searching, sorting and pagination',
         tags: ['Posts'],
         parameters: [
+            new OA\Parameter(name: 'author_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'status', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['draft', 'published', 'archived'])),
             new OA\Parameter(name: 'slug', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'category_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
@@ -40,16 +42,23 @@ class PostController extends Controller
     )]
     public function index(Request $request)
     {
+        $locale = $request->filled('locale') ? $request->input('locale') : null;
+
         $query = Post::query()
-            ->with(['categories', 'tags'])
+            ->with(['categories', 'tags', 'translations'])
             ->withCount('comments');
+
+        // Filter by author
+        if ($request->filled('author_id')) {
+            $query->where('author_id', $request->input('author_id'));
+        }
 
         // Filter by status
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filter by slug (exact match)
+        // Filter by slug (exact match on posts.slug)
         if ($request->filled('slug')) {
             $query->where('slug', $request->slug);
         }
@@ -68,19 +77,24 @@ class PostController extends Controller
             });
         }
 
-        // Search
+        // Search in translations
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('content', 'like', "%{$search}%")
-                  ->orWhere('excerpt', 'like', "%{$search}%");
+            $query->whereHas('translations', function ($q) use ($search, $locale) {
+                $q->where(function ($inner) use ($search) {
+                    $inner->where('title', 'like', "%{$search}%")
+                          ->orWhere('content', 'like', "%{$search}%")
+                          ->orWhere('excerpt', 'like', "%{$search}%");
+                });
+                if ($locale) {
+                    $q->where('locale', $locale);
+                }
             });
         }
 
-        // Filter by locale
-        if ($request->filled('locale')) {
-            $query->where('locale', $request->locale);
+        // Filter by locale — only return posts that have a translation in the requested locale
+        if ($locale) {
+            $query->whereHas('translations', fn ($q) => $q->where('locale', $locale));
         }
 
         // Only published posts for public API
@@ -95,7 +109,7 @@ class PostController extends Controller
 
         $posts = $query->paginate($request->get('per_page', 15));
 
-        return PostResource::collection($posts);
+        return PostResource::collection($posts)->additional(['locale' => $locale]);
     }
 
     #[OA\Post(
@@ -110,6 +124,7 @@ class PostController extends Controller
                 new OA\Property(property: 'slug', type: 'string', maxLength: 255),
                 new OA\Property(property: 'excerpt', type: 'string', maxLength: 500, nullable: true),
                 new OA\Property(property: 'content', type: 'string'),
+                new OA\Property(property: 'locale', type: 'string', enum: ['pl', 'en'], nullable: true),
                 new OA\Property(property: 'status', type: 'string', enum: ['draft', 'published', 'archived']),
                 new OA\Property(property: 'published_at', type: 'string', format: 'date-time', nullable: true),
                 new OA\Property(property: 'category_ids', type: 'array', items: new OA\Items(type: 'integer'), nullable: true),
@@ -126,14 +141,23 @@ class PostController extends Controller
     {
         $validated = $request->validated();
 
-        // Generate UUID
-        $validated['uuid']    = Str::uuid();
-        $validated['locale']  = $validated['locale'] ?? 'pl';
-        $validated['version'] = 1;
+        $post = Post::create([
+            'uuid'         => Str::uuid(),
+            'author_id'    => $request->user()->id,
+            'slug'         => $validated['slug'],
+            'status'       => $validated['status'],
+            'published_at' => $validated['published_at'] ?? null,
+            'cover_image'  => $validated['cover_image'] ?? null,
+        ]);
 
-        $validated['author_id'] = $request->user()->id;
-
-        $post = Post::create($validated);
+        $locale = $validated['locale'] ?? 'pl';
+        $post->translations()->create([
+            'locale'  => $locale,
+            'title'   => $validated['title'],
+            'excerpt' => $validated['excerpt'] ?? null,
+            'content' => $validated['content'],
+            'version' => 1,
+        ]);
 
         // Attach categories
         if (isset($validated['category_ids'])) {
@@ -145,7 +169,12 @@ class PostController extends Controller
             $post->tags()->attach($validated['tag_ids']);
         }
 
-        return new PostResource($post->load(['categories', 'tags']));
+        $post->load(['categories', 'tags', 'translations']);
+
+        return (new PostResource($post))
+            ->additional(['locale' => $locale])
+            ->response()
+            ->setStatusCode(201);
     }
 
     #[OA\Get(
@@ -154,18 +183,21 @@ class PostController extends Controller
         tags: ['Posts'],
         parameters: [
             new OA\Parameter(name: 'post', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'locale', in: 'query', required: false, schema: new OA\Schema(type: 'string', enum: ['pl', 'en'])),
         ],
         responses: [
             new OA\Response(response: 200, description: 'Post details', content: new OA\JsonContent(ref: '#/components/schemas/Post')),
             new OA\Response(response: 404, description: 'Post not found'),
         ]
     )]
-    public function show(Post $post)
+    public function show(Request $request, Post $post)
     {
-        $post->load(['categories', 'tags'])
+        $post->load(['categories', 'tags', 'translations'])
              ->loadCount('comments');
 
-        return new PostResource($post);
+        $locale = $request->filled('locale') ? $request->input('locale') : null;
+
+        return (new PostResource($post))->additional(['locale' => $locale]);
     }
 
     #[OA\Put(
@@ -182,6 +214,7 @@ class PostController extends Controller
                 new OA\Property(property: 'slug', type: 'string', maxLength: 255),
                 new OA\Property(property: 'excerpt', type: 'string', maxLength: 500, nullable: true),
                 new OA\Property(property: 'content', type: 'string'),
+                new OA\Property(property: 'locale', type: 'string', enum: ['pl', 'en'], nullable: true),
                 new OA\Property(property: 'status', type: 'string', enum: ['draft', 'published', 'archived']),
                 new OA\Property(property: 'published_at', type: 'string', format: 'date-time', nullable: true),
                 new OA\Property(property: 'category_ids', type: 'array', items: new OA\Items(type: 'integer'), nullable: true),
@@ -199,7 +232,20 @@ class PostController extends Controller
     {
         $validated = $request->validated();
 
-        $post->update($validated);
+        $post->update(Arr::only($validated, ['slug', 'status', 'published_at', 'cover_image']));
+
+        $locale = $validated['locale'] ?? $post->translations()->first()?->locale ?? 'pl';
+
+        if (isset($validated['title']) || isset($validated['content']) || isset($validated['excerpt'])) {
+            $post->translations()->updateOrCreate(
+                ['locale' => $locale],
+                array_filter([
+                    'title'   => $validated['title'] ?? null,
+                    'excerpt' => $validated['excerpt'] ?? null,
+                    'content' => $validated['content'] ?? null,
+                ], fn ($v) => $v !== null)
+            );
+        }
 
         // Sync categories
         if (isset($validated['category_ids'])) {
@@ -211,7 +257,9 @@ class PostController extends Controller
             $post->tags()->sync($validated['tag_ids']);
         }
 
-        return new PostResource($post->load(['categories', 'tags']));
+        $post->load(['categories', 'tags', 'translations']);
+
+        return (new PostResource($post))->additional(['locale' => $locale]);
     }
 
     #[OA\Delete(
@@ -233,8 +281,6 @@ class PostController extends Controller
     {
         $post->delete();
 
-        return response()->json([
-            'message' => 'Post deleted successfully'
-        ], 200);
+        return response()->json(['message' => 'Post deleted successfully']);
     }
 }

@@ -40,7 +40,7 @@ class CategoryController extends Controller
             ->withCount(['posts' => function ($q) use ($locale) {
                 $q->where('status', 'published');
                 if ($locale) {
-                    $q->where('locale', $locale);
+                    $q->whereHas('translations', fn ($t) => $t->where('locale', $locale));
                 }
             }]);
 

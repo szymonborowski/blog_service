@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Post extends Model
 {
@@ -13,45 +16,42 @@ class Post extends Model
     protected $fillable = [
         'uuid',
         'author_id',
-        'title',
         'slug',
-        'excerpt',
-        'content',
         'cover_image',
         'status',
-        'locale',
-        'version',
         'published_at',
     ];
 
     protected $casts = [
         'published_at' => 'datetime',
-        'version'      => 'integer',
     ];
 
-    protected static function booted(): void
+    public function translations(): HasMany
     {
-        static::updating(function (Post $post) {
-            $post->version = $post->getOriginal('version', 1) + 1;
-        });
+        return $this->hasMany(PostTranslation::class);
     }
 
-    public function author()
+    public function translation(string $locale): ?PostTranslation
+    {
+        return $this->translations->firstWhere('locale', $locale);
+    }
+
+    public function author(): BelongsTo
     {
         return $this->belongsTo(Author::class, 'author_id', 'user_id');
     }
 
-    public function tags()
+    public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class);
     }
 
-    public function categories()
+    public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class);
     }
 
-    public function comments()
+    public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
     }
