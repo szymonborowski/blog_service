@@ -28,6 +28,6 @@ class InternalPostController extends PostController
             $post->tags()->attach($validated['tag_ids']);
         }
 
-        return new PostResource($post->load(['categories', 'tags']));
+        return new PostResource($post->load(['categories', 'tags', 'author']));
     }
 }

@@ -16,7 +16,7 @@ class FeaturedPostController extends Controller
         $cacheKey = 'featured_posts.public' . ($locale ? ".{$locale}" : '');
 
         $posts = Cache::remember($cacheKey, 300, function () use ($locale) {
-            return FeaturedPost::with(['post.categories', 'post.tags', 'post.translations'])
+            return FeaturedPost::with(['post.categories', 'post.tags', 'post.translations', 'post.author'])
                 ->ordered()
                 ->get()
                 ->filter(function ($fp) use ($locale) {
@@ -41,6 +41,11 @@ class FeaturedPostController extends Controller
                         'position'    => $fp->position,
                         'categories'  => $fp->post->categories,
                         'tags'        => $fp->post->tags,
+                        'author'      => $fp->post->author ? [
+                            'id'    => $fp->post->author->user_id,
+                            'name'  => $fp->post->author->name,
+                            'email' => $fp->post->author->email,
+                        ] : null,
                     ]);
                 })
                 ->filter(fn ($p) => !empty($p['id']))

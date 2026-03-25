@@ -45,7 +45,7 @@ class PostController extends Controller
         $locale = $request->filled('locale') ? $request->input('locale') : null;
 
         $query = Post::query()
-            ->with(['categories', 'tags', 'translations'])
+            ->with(['categories', 'tags', 'translations', 'author'])
             ->withCount('comments');
 
         // Filter by author
@@ -169,7 +169,7 @@ class PostController extends Controller
             $post->tags()->attach($validated['tag_ids']);
         }
 
-        $post->load(['categories', 'tags', 'translations']);
+        $post->load(['categories', 'tags', 'translations', 'author']);
 
         return (new PostResource($post))
             ->additional(['locale' => $locale])
@@ -192,7 +192,7 @@ class PostController extends Controller
     )]
     public function show(Request $request, Post $post)
     {
-        $post->load(['categories', 'tags', 'translations'])
+        $post->load(['categories', 'tags', 'translations', 'author'])
              ->loadCount('comments');
 
         $locale = $request->filled('locale') ? $request->input('locale') : null;
@@ -257,7 +257,7 @@ class PostController extends Controller
             $post->tags()->sync($validated['tag_ids']);
         }
 
-        $post->load(['categories', 'tags', 'translations']);
+        $post->load(['categories', 'tags', 'translations', 'author']);
 
         return (new PostResource($post))->additional(['locale' => $locale]);
     }
