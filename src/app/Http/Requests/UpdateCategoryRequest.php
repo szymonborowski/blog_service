@@ -22,12 +22,16 @@ class UpdateCategoryRequest extends FormRequest
      */
     public function rules(): array
     {
-        $categoryId = $this->route('category');
+        $category   = $this->route('category');
+        $categoryId = $category instanceof \App\Models\Category
+            ? $category->getKey()
+            : $category;
 
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:100'],
-            'slug' => ['sometimes', 'required', 'string', 'max:100', 'unique:categories,slug,' . $categoryId],
-            'color' => ['nullable', 'string', 'max:20'],
+            'name'      => ['sometimes', 'required', 'string', 'max:100'],
+            'slug'      => ['sometimes', 'required', 'string', 'max:100', 'unique:categories,slug,' . $categoryId],
+            'color'     => ['nullable', 'string', 'max:20'],
+            'icon'      => ['nullable', 'string', 'max:50'],
             'parent_id' => ['nullable', 'exists:categories,id'],
         ];
     }

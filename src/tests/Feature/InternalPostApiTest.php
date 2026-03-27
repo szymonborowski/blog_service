@@ -68,8 +68,8 @@ class InternalPostApiTest extends TestCase
     #[Test]
     public function can_search_posts(): void
     {
-        Post::factory()->create(['title' => 'Laravel microservices guide']);
-        Post::factory()->create(['title' => 'Something else entirely']);
+        Post::factory()->has(\App\Models\PostTranslation::factory()->state(['title' => 'Laravel microservices guide', 'locale' => 'pl']), 'translations')->create();
+        Post::factory()->has(\App\Models\PostTranslation::factory()->state(['title' => 'Something else entirely', 'locale' => 'pl']), 'translations')->create();
 
         $response = $this->getJson('/api/internal/posts?search=microservices', $this->withKey())
             ->assertOk();
@@ -170,19 +170,22 @@ class InternalPostApiTest extends TestCase
     #[Test]
     public function can_update_post_via_internal_api(): void
     {
-        $post = Post::factory()->create(['title' => 'Old title', 'slug' => 'old-slug']);
+        $post = Post::factory()
+            ->has(\App\Models\PostTranslation::factory()->state(['title' => 'Old title', 'locale' => 'pl']), 'translations')
+            ->create(['slug' => 'old-slug']);
 
         $this->putJson("/api/internal/posts/{$post->id}", [
             'title'   => 'New title',
             'slug'    => 'new-slug',
             'content' => 'Updated content',
             'status'  => 'published',
+            'locale'  => 'pl',
         ], $this->withKey())
             ->assertOk()
             ->assertJsonPath('data.title', 'New title')
             ->assertJsonPath('data.slug', 'new-slug');
 
-        $this->assertDatabaseHas('posts', ['id' => $post->id, 'title' => 'New title']);
+        $this->assertDatabaseHas('post_translations', ['post_id' => $post->id, 'title' => 'New title']);
     }
 
     #[Test]

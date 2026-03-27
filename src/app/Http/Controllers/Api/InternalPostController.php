@@ -13,12 +13,24 @@ class InternalPostController extends PostController
     {
         $validated = $request->validated();
 
-        $validated['uuid']    = Str::uuid();
-        $validated['locale']  = $validated['locale'] ?? 'pl';
-        $validated['version'] = 1;
-        $validated['author_id'] = $request->input('author_id', 1);
+        $locale = $validated['locale'] ?? 'pl';
 
-        $post = Post::create($validated);
+        $post = Post::create([
+            'uuid'         => Str::uuid(),
+            'author_id'    => $request->input('author_id', 1),
+            'slug'         => $validated['slug'],
+            'status'       => $validated['status'],
+            'published_at' => $validated['published_at'] ?? null,
+            'cover_image'  => $validated['cover_image'] ?? null,
+        ]);
+
+        $post->translations()->create([
+            'locale'  => $locale,
+            'title'   => $validated['title'],
+            'excerpt' => $validated['excerpt'] ?? null,
+            'content' => $validated['content'],
+            'version' => 1,
+        ]);
 
         if (isset($validated['category_ids'])) {
             $post->categories()->attach($validated['category_ids']);
@@ -28,6 +40,7 @@ class InternalPostController extends PostController
             $post->tags()->attach($validated['tag_ids']);
         }
 
-        return new PostResource($post->load(['categories', 'tags', 'author']));
+        return (new PostResource($post->load(['categories', 'tags', 'translations', 'author'])))
+            ->additional(['locale' => $locale]);
     }
 }

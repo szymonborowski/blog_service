@@ -16,6 +16,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'name', type: 'string', example: 'Technology'),
         new OA\Property(property: 'slug', type: 'string', example: 'technology'),
         new OA\Property(property: 'color', type: 'string', nullable: true, example: 'blue'),
+        new OA\Property(property: 'icon', type: 'string', nullable: true, example: 'code-bracket'),
         new OA\Property(property: 'parent_id', type: 'integer', nullable: true, example: null),
         new OA\Property(property: 'parent', type: 'object', nullable: true, properties: [
             new OA\Property(property: 'id', type: 'integer'),
@@ -44,6 +45,7 @@ class CategoryResource extends JsonResource
             'name' => $this->name,
             'slug' => $this->slug,
             'color' => $this->color,
+            'icon' => $this->icon,
             'parent_id' => $this->parent_id,
             'parent' => $this->whenLoaded('parent', function () {
                 return [

@@ -32,6 +32,7 @@ class StorePostRequest extends FormRequest
             'locale'       => ['nullable', 'in:pl,en'],
             'category_ids' => ['nullable', 'array'],
             'category_ids.*' => ['exists:categories,id'],
+            'cover_image' => ['nullable', 'string', 'max:255'],
             'tag_ids' => ['nullable', 'array'],
             'tag_ids.*' => ['exists:tags,id'],
         ];

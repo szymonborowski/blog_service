@@ -15,6 +15,7 @@ class Category extends Model
         'name',
         'slug',
         'color',
+        'icon',
         'parent_id',
     ];
 

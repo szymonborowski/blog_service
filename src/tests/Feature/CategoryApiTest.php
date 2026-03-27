@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Post;
+use App\Models\PostTranslation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -19,6 +20,10 @@ class CategoryApiTest extends TestCase
         $this->setUpJwtAuth();
     }
 
+    // -------------------------------------------------------------------------
+    // Index
+    // -------------------------------------------------------------------------
+
     public function test_can_list_categories(): void
     {
         Category::factory()->count(5)->create();
@@ -33,6 +38,7 @@ class CategoryApiTest extends TestCase
                         'name',
                         'slug',
                         'parent_id',
+                        'color',
                     ]
                 ],
                 'links',
@@ -40,49 +46,226 @@ class CategoryApiTest extends TestCase
             ]);
     }
 
-    public function test_can_create_category(): void
+    public function test_can_filter_root_categories(): void
     {
-        $categoryData = [
-            'name' => 'Technology',
-            'slug' => 'technology',
-        ];
+        $root1 = Category::factory()->create(['parent_id' => null]);
+        $root2 = Category::factory()->create(['parent_id' => null]);
+        Category::factory()->create(['parent_id' => $root1->id]);
 
-        $response = $this->postJson('/api/v1/categories', $categoryData, $this->authHeaders());
+        $response = $this->getJson('/api/v1/categories?root=true');
+
+        $response->assertOk();
+        $this->assertEquals(2, count($response->json('data')));
+    }
+
+    public function test_can_filter_categories_by_parent(): void
+    {
+        $parent = Category::factory()->create();
+        Category::factory()->count(2)->create(['parent_id' => $parent->id]);
+        Category::factory()->create();
+
+        $response = $this->getJson("/api/v1/categories?parent_id={$parent->id}");
+
+        $response->assertOk();
+        $this->assertEquals(2, count($response->json('data')));
+    }
+
+    public function test_can_search_categories(): void
+    {
+        Category::factory()->create(['name' => 'Technology', 'slug' => 'technology']);
+        Category::factory()->create(['name' => 'Programming', 'slug' => 'programming']);
+        Category::factory()->create(['name' => 'Design', 'slug' => 'design']);
+
+        $response = $this->getJson('/api/v1/categories?search=Tech');
+
+        $response->assertOk();
+        $this->assertEquals(1, count($response->json('data')));
+        $this->assertStringContainsString('Tech', $response->json('data.0.name'));
+    }
+
+    public function test_categories_are_paginated(): void
+    {
+        Category::factory()->count(20)->create();
+
+        $response = $this->getJson('/api/v1/categories?per_page=5');
+
+        $response->assertOk();
+        $this->assertEquals(5, count($response->json('data')));
+        $this->assertEquals(20, $response->json('meta.total'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Show
+    // -------------------------------------------------------------------------
+
+    public function test_can_show_single_category(): void
+    {
+        $category = Category::factory()->create();
+
+        $response = $this->getJson("/api/v1/categories/{$category->id}");
+
+        $response->assertOk()
+            ->assertJsonFragment([
+                'id'   => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ]);
+    }
+
+    public function test_can_show_category_with_hierarchy(): void
+    {
+        $parent   = Category::factory()->create(['name' => 'Parent', 'slug' => 'parent']);
+        $category = Category::factory()->create(['name' => 'Child', 'slug' => 'child', 'parent_id' => $parent->id]);
+        Category::factory()->create(['name' => 'Subchild', 'slug' => 'subchild', 'parent_id' => $category->id]);
+
+        $response = $this->getJson("/api/v1/categories/{$category->id}");
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'data' => [
+                    'id',
+                    'name',
+                    'parent'   => ['id', 'name', 'slug'],
+                    'children' => [
+                        '*' => ['id', 'name', 'slug']
+                    ],
+                ]
+            ]);
+    }
+
+    public function test_category_includes_posts_count(): void
+    {
+        $category = Category::factory()->create();
+
+        Post::factory()->published()
+            ->has(PostTranslation::factory()->locale('pl'), 'translations')
+            ->count(2)
+            ->create()
+            ->each(fn ($p) => $p->categories()->attach($category));
+
+        $response = $this->getJson("/api/v1/categories/{$category->id}");
+
+        $response->assertOk()
+            ->assertJsonFragment(['posts_count' => 2]);
+    }
+
+    public function test_posts_count_excludes_drafts_in_index(): void
+    {
+        // posts_count in index is filtered to published only
+        $category = Category::factory()->create(['slug' => 'filtered-cat']);
+
+        Post::factory()->published()
+            ->has(PostTranslation::factory()->locale('pl'), 'translations')
+            ->count(3)
+            ->create()
+            ->each(fn ($p) => $p->categories()->attach($category));
+
+        Post::factory()->draft()
+            ->has(PostTranslation::factory()->locale('pl'), 'translations')
+            ->count(2)
+            ->create()
+            ->each(fn ($p) => $p->categories()->attach($category));
+
+        $response = $this->getJson('/api/v1/categories');
+
+        $response->assertOk();
+        $cat = collect($response->json('data'))->firstWhere('slug', 'filtered-cat');
+        $this->assertEquals(3, $cat['posts_count']);
+    }
+
+    public function test_posts_count_filtered_by_locale_in_index(): void
+    {
+        $category = Category::factory()->create(['slug' => 'locale-cat']);
+
+        // 2 posts with PL translation
+        Post::factory()->published()
+            ->has(PostTranslation::factory()->locale('pl'), 'translations')
+            ->count(2)
+            ->create()
+            ->each(fn ($p) => $p->categories()->attach($category));
+
+        // 1 post with EN translation only
+        Post::factory()->published()
+            ->has(PostTranslation::factory()->locale('en'), 'translations')
+            ->count(1)
+            ->create()
+            ->each(fn ($p) => $p->categories()->attach($category));
+
+        $response = $this->getJson('/api/v1/categories?locale=pl');
+
+        $response->assertOk();
+        $cat = collect($response->json('data'))->firstWhere('slug', 'locale-cat');
+        $this->assertEquals(2, $cat['posts_count']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Color
+    // -------------------------------------------------------------------------
+
+    public function test_can_create_category_with_color(): void
+    {
+        $response = $this->postJson('/api/v1/categories', [
+            'name'  => 'Tech',
+            'slug'  => 'tech',
+            'color' => '#3B82F6',
+        ], $this->authHeaders());
 
         $response->assertCreated()
-            ->assertJsonFragment([
-                'name' => 'Technology',
-                'slug' => 'technology',
-            ]);
+            ->assertJsonFragment(['color' => '#3B82F6']);
 
-        $this->assertDatabaseHas('categories', [
+        $this->assertDatabaseHas('categories', ['slug' => 'tech', 'color' => '#3B82F6']);
+    }
+
+    public function test_color_is_null_by_default(): void
+    {
+        $category = Category::factory()->create(['color' => null]);
+
+        $response = $this->getJson("/api/v1/categories/{$category->id}");
+
+        $response->assertOk()
+            ->assertJsonFragment(['color' => null]);
+    }
+
+    public function test_can_update_category_color(): void
+    {
+        $category = Category::factory()->create(['color' => '#000000']);
+
+        $this->putJson("/api/v1/categories/{$category->id}", [
+            'color' => '#FF0000',
+        ], $this->authHeaders())->assertOk();
+
+        $this->assertDatabaseHas('categories', ['id' => $category->id, 'color' => '#FF0000']);
+    }
+
+    // -------------------------------------------------------------------------
+    // Store / Update / Delete — basic validation
+    // -------------------------------------------------------------------------
+
+    public function test_can_create_category(): void
+    {
+        $response = $this->postJson('/api/v1/categories', [
             'name' => 'Technology',
             'slug' => 'technology',
-        ]);
+        ], $this->authHeaders());
+
+        $response->assertCreated()
+            ->assertJsonFragment(['name' => 'Technology', 'slug' => 'technology']);
+
+        $this->assertDatabaseHas('categories', ['name' => 'Technology', 'slug' => 'technology']);
     }
 
     public function test_can_create_subcategory_with_parent(): void
     {
-        $parent = Category::factory()->create(['name' => 'Programming']);
+        $parent = Category::factory()->create(['name' => 'Programming', 'slug' => 'programming']);
 
-        $categoryData = [
-            'name' => 'PHP',
-            'slug' => 'php',
+        $response = $this->postJson('/api/v1/categories', [
+            'name'      => 'PHP',
+            'slug'      => 'php',
             'parent_id' => $parent->id,
-        ];
-
-        $response = $this->postJson('/api/v1/categories', $categoryData, $this->authHeaders());
+        ], $this->authHeaders());
 
         $response->assertCreated()
-            ->assertJsonFragment([
-                'name' => 'PHP',
-                'parent_id' => $parent->id,
-            ]);
-
-        $this->assertDatabaseHas('categories', [
-            'name' => 'PHP',
-            'parent_id' => $parent->id,
-        ]);
+            ->assertJsonFragment(['name' => 'PHP', 'parent_id' => $parent->id]);
     }
 
     #[DataProvider('invalidCategoryDataProvider')]
@@ -128,173 +311,47 @@ class CategoryApiTest extends TestCase
     {
         Category::factory()->create(['slug' => 'technology']);
 
-        $response = $this->postJson('/api/v1/categories', [
+        $this->postJson('/api/v1/categories', [
             'name' => 'Tech',
             'slug' => 'technology',
-        ], $this->authHeaders());
-
-        $response->assertUnprocessable()
+        ], $this->authHeaders())
+            ->assertUnprocessable()
             ->assertJsonValidationErrors(['slug']);
-    }
-
-    public function test_can_show_single_category(): void
-    {
-        $category = Category::factory()->create();
-
-        $response = $this->getJson("/api/v1/categories/{$category->id}");
-
-        $response->assertOk()
-            ->assertJsonFragment([
-                'id' => $category->id,
-                'name' => $category->name,
-                'slug' => $category->slug,
-            ]);
-    }
-
-    public function test_can_show_category_with_hierarchy(): void
-    {
-        $parent = Category::factory()->create(['name' => 'Parent']);
-        $category = Category::factory()->create([
-            'name' => 'Child',
-            'parent_id' => $parent->id,
-        ]);
-        $subchild = Category::factory()->create([
-            'name' => 'Subchild',
-            'parent_id' => $category->id,
-        ]);
-
-        $response = $this->getJson("/api/v1/categories/{$category->id}");
-
-        $response->assertOk()
-            ->assertJsonStructure([
-                'data' => [
-                    'id',
-                    'name',
-                    'parent' => ['id', 'name', 'slug'],
-                    'children' => [
-                        '*' => ['id', 'name', 'slug']
-                    ],
-                ]
-            ]);
     }
 
     public function test_can_update_category(): void
     {
         $category = Category::factory()->create();
 
-        $updateData = [
+        $this->putJson("/api/v1/categories/{$category->id}", [
             'name' => 'Updated Name',
-        ];
+        ], $this->authHeaders())
+            ->assertOk()
+            ->assertJsonFragment(['name' => 'Updated Name']);
 
-        $response = $this->putJson("/api/v1/categories/{$category->id}", $updateData, $this->authHeaders());
-
-        $response->assertOk()
-            ->assertJsonFragment([
-                'name' => 'Updated Name',
-            ]);
-
-        $this->assertDatabaseHas('categories', [
-            'id' => $category->id,
-            'name' => 'Updated Name',
-        ]);
+        $this->assertDatabaseHas('categories', ['id' => $category->id, 'name' => 'Updated Name']);
     }
 
     public function test_can_delete_category(): void
     {
         $category = Category::factory()->create();
 
-        $response = $this->deleteJson("/api/v1/categories/{$category->id}", [], $this->authHeaders());
+        $this->deleteJson("/api/v1/categories/{$category->id}", [], $this->authHeaders())
+            ->assertOk()
+            ->assertJson(['message' => 'Category deleted successfully']);
 
-        $response->assertOk()
-            ->assertJson([
-                'message' => 'Category deleted successfully'
-            ]);
-
-        $this->assertDatabaseMissing('categories', [
-            'id' => $category->id,
-        ]);
+        $this->assertDatabaseMissing('categories', ['id' => $category->id]);
     }
 
     public function test_cannot_delete_category_with_children(): void
     {
         $parent = Category::factory()->create();
-        $child = Category::factory()->create(['parent_id' => $parent->id]);
+        Category::factory()->create(['parent_id' => $parent->id]);
 
-        $response = $this->deleteJson("/api/v1/categories/{$parent->id}", [], $this->authHeaders());
+        $this->deleteJson("/api/v1/categories/{$parent->id}", [], $this->authHeaders())
+            ->assertUnprocessable()
+            ->assertJson(['message' => 'Cannot delete category with subcategories']);
 
-        $response->assertUnprocessable()
-            ->assertJson([
-                'message' => 'Cannot delete category with subcategories'
-            ]);
-
-        $this->assertDatabaseHas('categories', [
-            'id' => $parent->id,
-        ]);
-    }
-
-    public function test_can_filter_root_categories(): void
-    {
-        $root1 = Category::factory()->create(['parent_id' => null]);
-        $root2 = Category::factory()->create(['parent_id' => null]);
-        $child = Category::factory()->create(['parent_id' => $root1->id]);
-
-        $response = $this->getJson('/api/v1/categories?root=true');
-
-        $response->assertOk();
-        $this->assertEquals(2, count($response->json('data')));
-    }
-
-    public function test_can_filter_categories_by_parent(): void
-    {
-        $parent = Category::factory()->create();
-        $child1 = Category::factory()->create(['parent_id' => $parent->id]);
-        $child2 = Category::factory()->create(['parent_id' => $parent->id]);
-        $other = Category::factory()->create();
-
-        $response = $this->getJson("/api/v1/categories?parent_id={$parent->id}");
-
-        $response->assertOk();
-        $this->assertEquals(2, count($response->json('data')));
-    }
-
-    public function test_can_search_categories(): void
-    {
-        Category::factory()->create(['name' => 'Technology']);
-        Category::factory()->create(['name' => 'Programming']);
-        Category::factory()->create(['name' => 'Design']);
-
-        $response = $this->getJson('/api/v1/categories?search=Tech');
-
-        $response->assertOk();
-        $this->assertEquals(1, count($response->json('data')));
-        $this->assertStringContainsString('Tech', $response->json('data.0.name'));
-    }
-
-    public function test_category_includes_posts_count(): void
-    {
-        $category = Category::factory()->create();
-        $post1 = Post::factory()->create();
-        $post2 = Post::factory()->create();
-
-        $post1->categories()->attach($category);
-        $post2->categories()->attach($category);
-
-        $response = $this->getJson("/api/v1/categories/{$category->id}");
-
-        $response->assertOk()
-            ->assertJsonFragment([
-                'posts_count' => 2
-            ]);
-    }
-
-    public function test_categories_are_paginated(): void
-    {
-        Category::factory()->count(20)->create();
-
-        $response = $this->getJson('/api/v1/categories?per_page=5');
-
-        $response->assertOk();
-        $this->assertEquals(5, count($response->json('data')));
-        $this->assertEquals(20, $response->json('meta.total'));
+        $this->assertDatabaseHas('categories', ['id' => $parent->id]);
     }
 }

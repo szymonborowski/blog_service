@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Post;
+use App\Models\PostTranslation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 use Tests\Traits\WithJwtAuth;
@@ -87,10 +88,13 @@ class AuthenticationTest extends TestCase
 
     public function test_can_update_post_with_valid_token(): void
     {
-        $post = Post::factory()->create();
+        $post = Post::factory()
+            ->has(PostTranslation::factory()->locale('pl'), 'translations')
+            ->create();
 
         $response = $this->putJson("/api/v1/posts/{$post->id}", [
-            'title' => 'Updated Title',
+            'title'  => 'Updated Title',
+            'locale' => 'pl',
         ], $this->authHeaders());
 
         $response->assertOk();
@@ -149,16 +153,14 @@ class AuthenticationTest extends TestCase
     public function test_user_id_from_token_is_used_as_author_id(): void
     {
         $response = $this->postJson('/api/v1/posts', [
-            'title' => 'Test Post',
-            'slug' => 'test-post',
+            'title'   => 'Test Post',
+            'slug'    => 'test-post',
             'content' => 'Test content',
-            'status' => 'draft',
+            'status'  => 'draft',
         ], $this->authHeaders(123));
 
         $response->assertCreated();
-        $this->assertDatabaseHas('posts', [
-            'title' => 'Test Post',
-            'author_id' => 123,
-        ]);
+        $this->assertDatabaseHas('posts', ['author_id' => 123]);
+        $this->assertDatabaseHas('post_translations', ['title' => 'Test Post']);
     }
 }
