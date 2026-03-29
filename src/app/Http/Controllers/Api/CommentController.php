@@ -32,7 +32,7 @@ class CommentController extends Controller
     )]
     public function index(Request $request)
     {
-        $query = Comment::query()->with('post');
+        $query = Comment::query()->with(['post', 'author']);
 
         // Filter by post
         if ($request->has('post_id')) {
@@ -100,7 +100,7 @@ class CommentController extends Controller
     )]
     public function show(Comment $comment)
     {
-        $comment->load('post');
+        $comment->load(['post', 'author']);
         return new CommentResource($comment);
     }
 

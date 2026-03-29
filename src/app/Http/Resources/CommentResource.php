@@ -38,6 +38,9 @@ class CommentResource extends JsonResource
             'status' => $this->status,
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
+            'author' => $this->whenLoaded('author', fn() => [
+                'name' => $this->author->name,
+            ]),
             'post' => $this->whenLoaded('post', function () {
                 return [
                     'id' => $this->post->id,
