@@ -300,4 +300,61 @@ class CommentApiTest extends TestCase
 
         $response->assertUnauthorized();
     }
+
+    public function test_create_comment_validation_fails_for_content_too_long(): void
+    {
+        $post = Post::factory()->create();
+
+        $response = $this->postJson('/api/v1/comments', [
+            'post_id' => $post->id,
+            'content' => str_repeat('a', 5001),
+        ], $this->authHeaders());
+
+        $response->assertUnprocessable()
+            ->assertJsonValidationErrors(['content']);
+    }
+
+    public function test_list_comments_includes_author_name(): void
+    {
+        $post   = Post::factory()->create();
+        $author = \App\Models\Author::factory()->create(['name' => 'Jane Doe']);
+        Comment::factory()->approved()->create([
+            'post_id'   => $post->id,
+            'author_id' => $author->user_id,
+        ]);
+
+        $response = $this->getJson('/api/v1/comments');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.author.name', 'Jane Doe');
+    }
+
+    public function test_show_comment_includes_author_name(): void
+    {
+        $post    = Post::factory()->create();
+        $author  = \App\Models\Author::factory()->create(['name' => 'John Smith']);
+        $comment = Comment::factory()->create([
+            'post_id'   => $post->id,
+            'author_id' => $author->user_id,
+        ]);
+
+        $response = $this->getJson("/api/v1/comments/{$comment->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.author.name', 'John Smith');
+    }
+
+    public function test_list_comments_author_is_null_when_no_author_record(): void
+    {
+        $post = Post::factory()->create();
+        Comment::factory()->approved()->create([
+            'post_id'   => $post->id,
+            'author_id' => 99999,
+        ]);
+
+        $response = $this->getJson('/api/v1/comments');
+
+        $response->assertOk()
+            ->assertJsonPath('data.0.author', null);
+    }
 }
