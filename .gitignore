@@ -19,3 +19,4 @@ k8s/secret.yaml
 /src/storage/*.key
 /src/bootstrap/cache/*
 !src/bootstrap/cache/.gitignore
+src/.env.testing
