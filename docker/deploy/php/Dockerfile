@@ -24,6 +24,9 @@ RUN apk add --no-cache \
         libzip \
         icu-libs \
         oniguruma \
+        freetype \
+        libjpeg-turbo \
+        libwebp \
     && apk add --no-cache --virtual .build-deps \
         libpng-dev \
         libzip-dev \
@@ -31,8 +34,12 @@ RUN apk add --no-cache \
         oniguruma-dev \
         libxml2-dev \
         linux-headers \
+        freetype-dev \
+        libjpeg-turbo-dev \
+        libwebp-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install -j"$(nproc)" \
-        pdo_mysql mbstring zip exif pcntl bcmath intl sockets \
+        pdo_mysql mbstring zip exif pcntl bcmath intl sockets gd \
     && apk del .build-deps \
     && rm -rf /tmp/*
 

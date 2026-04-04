@@ -39,4 +39,8 @@ return [
         'api_key' => env('INTERNAL_API_KEY'),
     ],
 
+    'cdn' => [
+        'url' => env('CDN_URL'),
+    ],
+
 ];

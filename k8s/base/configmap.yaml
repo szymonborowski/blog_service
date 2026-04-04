@@ -47,6 +47,14 @@ data:
             include fastcgi_params;
         }
 
+        location /storage/media/ {
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+            add_header Access-Control-Allow-Origin "*";
+            add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS";
+            try_files $uri =404;
+        }
+
         location ~ /\.(?!well-known).* {
             deny all;
         }

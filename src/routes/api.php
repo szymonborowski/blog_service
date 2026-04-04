@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\FeaturedPostController;
 use App\Http\Controllers\Api\InternalPostController;
+use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\TagController;
@@ -92,4 +93,10 @@ Route::middleware([InternalApiKey::class])->prefix('internal')->group(function (
     Route::post('featured-posts', [FeaturedPostController::class, 'store']);
     Route::patch('featured-posts/reorder', [FeaturedPostController::class, 'reorder']);
     Route::delete('featured-posts/{featuredPost}', [FeaturedPostController::class, 'destroy']);
+
+    // Media
+    Route::get('media', [MediaController::class, 'index']);
+    Route::post('media', [MediaController::class, 'store']);
+    Route::get('media/{media}', [MediaController::class, 'show']);
+    Route::delete('media/{media}', [MediaController::class, 'destroy']);
 });
