@@ -47,6 +47,17 @@ class MediaController extends Controller
         return new MediaResource($media);
     }
 
+    public function update(Request $request, Media $media)
+    {
+        $validated = $request->validate([
+            'alt' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $media->update($validated);
+
+        return new MediaResource($media);
+    }
+
     public function destroy(Media $media)
     {
         $this->mediaService->delete($media);

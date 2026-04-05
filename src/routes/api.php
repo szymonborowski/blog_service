@@ -98,5 +98,6 @@ Route::middleware([InternalApiKey::class])->prefix('internal')->group(function (
     Route::get('media', [MediaController::class, 'index']);
     Route::post('media', [MediaController::class, 'store']);
     Route::get('media/{media}', [MediaController::class, 'show']);
+    Route::match(['put', 'patch'], 'media/{media}', [MediaController::class, 'update']);
     Route::delete('media/{media}', [MediaController::class, 'destroy']);
 });

@@ -300,6 +300,55 @@ class MediaApiTest extends TestCase
             ->assertNotFound();
     }
 
+    // --- Update media ---
+
+    #[Test]
+    public function can_update_media_alt_text(): void
+    {
+        $media = Media::factory()->create(['alt' => 'Old alt']);
+
+        $this->patchJson("/api/internal/media/{$media->id}", [
+            'alt' => 'New alt text',
+        ], $this->withKey())
+            ->assertOk()
+            ->assertJsonPath('data.alt', 'New alt text');
+
+        $this->assertDatabaseHas('media', ['id' => $media->id, 'alt' => 'New alt text']);
+    }
+
+    #[Test]
+    public function can_clear_media_alt_text(): void
+    {
+        $media = Media::factory()->create(['alt' => 'Some alt']);
+
+        $this->patchJson("/api/internal/media/{$media->id}", [
+            'alt' => null,
+        ], $this->withKey())
+            ->assertOk()
+            ->assertJsonPath('data.alt', null);
+    }
+
+    #[Test]
+    public function update_rejects_alt_text_exceeding_max_length(): void
+    {
+        $media = Media::factory()->create();
+
+        $this->patchJson("/api/internal/media/{$media->id}", [
+            'alt' => str_repeat('a', 256),
+        ], $this->withKey())
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['alt']);
+    }
+
+    #[Test]
+    public function update_returns_404_for_nonexistent_media(): void
+    {
+        $this->patchJson('/api/internal/media/9999', [
+            'alt' => 'test',
+        ], $this->withKey())
+            ->assertNotFound();
+    }
+
     // --- Delete media ---
 
     #[Test]

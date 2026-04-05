@@ -96,6 +96,18 @@ class PostResource extends JsonResource
                 ])
             ),
             'comments_count' => $this->whenCounted('comments'),
+            'available_locales' => $this->whenLoaded('translations', fn () =>
+                $this->translations->pluck('locale')->toArray()
+            ),
+            'all_translations' => $this->whenLoaded('translations', fn () =>
+                $this->translations->map(fn ($t) => [
+                    'locale'  => $t->locale,
+                    'title'   => $t->title,
+                    'excerpt' => $t->excerpt,
+                    'content' => $t->content,
+                    'version' => $t->version,
+                ])
+            ),
         ];
     }
 }
