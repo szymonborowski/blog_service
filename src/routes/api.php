@@ -64,6 +64,9 @@ Route::prefix('v1')->group(function () {
         // Comment moderation
         Route::patch('comments/{comment}/approve', [CommentController::class, 'approve']);
         Route::patch('comments/{comment}/reject', [CommentController::class, 'reject']);
+
+        // Media (read-only for authenticated users)
+        Route::get('media', [MediaController::class, 'index']);
     });
 });
 
