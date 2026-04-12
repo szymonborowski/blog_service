@@ -3,3 +3,18 @@ kind: Kustomization
 
 resources:
   - ../../base
+
+images:
+  - name: ghcr.io/szymonborowski/portfolio-blog
+    newTag: v1.16.0
+
+patches:
+  - target:
+      kind: Job
+      name: blog-seed
+    patch: |
+      $patch: delete
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: blog-seed
