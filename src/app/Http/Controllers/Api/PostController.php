@@ -171,6 +171,10 @@ class PostController extends Controller
 
         $post->load(['categories', 'tags', 'translations', 'author']);
 
+        if ($post->shouldBeSearchable()) {
+            $post->searchable();
+        }
+
         return (new PostResource($post))
             ->additional(['locale' => $locale])
             ->response()
@@ -258,6 +262,12 @@ class PostController extends Controller
         }
 
         $post->load(['categories', 'tags', 'translations', 'author']);
+
+        if ($post->shouldBeSearchable()) {
+            $post->searchable();
+        } else {
+            $post->unsearchable();
+        }
 
         return (new PostResource($post))->additional(['locale' => $locale]);
     }

@@ -40,7 +40,12 @@ class InternalPostController extends PostController
             $post->tags()->attach($validated['tag_ids']);
         }
 
-        return (new PostResource($post->load(['categories', 'tags', 'translations', 'author'])))
-            ->additional(['locale' => $locale]);
+        $post->load(['categories', 'tags', 'translations', 'author']);
+
+        if ($post->shouldBeSearchable()) {
+            $post->searchable();
+        }
+
+        return (new PostResource($post))->additional(['locale' => $locale]);
     }
 }

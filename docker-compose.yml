@@ -22,11 +22,16 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MEILISEARCH_HOST: http://blog-meilisearch:7700
+      MEILISEARCH_KEY: ${MEILISEARCH_MASTER_KEY}
+      SCOUT_DRIVER: meilisearch
     volumes:
       - ./src:/var/www/html
       - blog_vendor:/var/www/html/vendor
     depends_on:
       blog-db:
+        condition: service_healthy
+      blog-meilisearch:
         condition: service_healthy
     expose:
       - "9000"
@@ -88,11 +93,16 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MEILISEARCH_HOST: http://blog-meilisearch:7700
+      MEILISEARCH_KEY: ${MEILISEARCH_MASTER_KEY}
+      SCOUT_DRIVER: meilisearch
     volumes:
       - ./src:/var/www/html
       - blog_vendor:/var/www/html/vendor
     depends_on:
       blog-db:
+        condition: service_healthy
+      blog-meilisearch:
         condition: service_healthy
     restart: always
     networks:
@@ -104,6 +114,30 @@ services:
         limits:
           memory: 256m
           cpus: '0.25'
+
+  blog-meilisearch:
+    image: getmeili/meilisearch:v1.11
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY}
+      MEILI_ENV: development
+    volumes:
+      - blog_meilisearch_data:/meili_data
+    ports:
+      - "127.0.0.1:7700:7700"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - blog-internal
+    logging: *default-logging
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.50'
 
   blog-db:
     image: mysql:8.0
@@ -142,3 +176,4 @@ networks:
 volumes:
   blog_db_data:
   blog_vendor:
+  blog_meilisearch_data:

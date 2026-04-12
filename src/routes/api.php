@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\InternalPostController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\NewsletterController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\TagController;
 use App\Http\Middleware\InternalApiKey;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,9 @@ Route::prefix('v1')->group(function () {
     // Newsletter
     Route::post('newsletter/subscribe', [NewsletterController::class, 'subscribe']);
     Route::post('newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe']);
+
+    // Search
+    Route::get('search', [SearchController::class, 'index']);
 
     // Read-only endpoints (no auth required)
     Route::get('posts', [PostController::class, 'index']);

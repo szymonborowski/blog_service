@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Laravel\Scout\Searchable;
 
 class Category extends Model
 {
-    use HasFactory;
+    use HasFactory, Searchable;
 
     public $timestamps = false;
 
@@ -32,5 +33,16 @@ class Category extends Model
     public function posts()
     {
         return $this->belongsToMany(Post::class);
+    }
+
+    public function toSearchableArray(): array
+    {
+        return [
+            'id'    => $this->id,
+            'name'  => $this->name,
+            'slug'  => $this->slug,
+            'color' => $this->color,
+            'icon'  => $this->icon,
+        ];
     }
 }

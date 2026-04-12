@@ -23,6 +23,8 @@ class PostTranslation extends Model
         'version' => 'integer',
     ];
 
+    protected $touches = ['post'];
+
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
