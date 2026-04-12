@@ -5,6 +5,7 @@ resources:
   - configmap.yaml
   - consumer-deployment.yaml
   - deployment.yaml
+  - meilisearch.yaml
   - migration-job.yaml
   - mysql.yaml
   - seed-job.yaml
