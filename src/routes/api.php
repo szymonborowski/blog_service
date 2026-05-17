@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\FeaturedPostController;
+use App\Http\Controllers\Api\InternalAuthorController;
 use App\Http\Controllers\Api\InternalPostController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\NewsletterController;
@@ -100,6 +101,9 @@ Route::middleware([InternalApiKey::class])->prefix('internal')->group(function (
     Route::post('featured-posts', [FeaturedPostController::class, 'store']);
     Route::patch('featured-posts/reorder', [FeaturedPostController::class, 'reorder']);
     Route::delete('featured-posts/{featuredPost}', [FeaturedPostController::class, 'destroy']);
+
+    // Authors
+    Route::get('authors', [InternalAuthorController::class, 'index']);
 
     // Media
     Route::get('media', [MediaController::class, 'index']);

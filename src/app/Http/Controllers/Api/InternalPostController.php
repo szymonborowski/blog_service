@@ -17,7 +17,7 @@ class InternalPostController extends PostController
 
         $post = Post::create([
             'uuid'         => Str::uuid(),
-            'author_id'    => $request->input('author_id', 1),
+            'author_id'    => $validated['author_id'] ?? 1,
             'slug'         => $validated['slug'],
             'status'       => $validated['status'],
             'published_at' => $validated['published_at'] ?? null,

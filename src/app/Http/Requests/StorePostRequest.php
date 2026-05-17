@@ -35,6 +35,7 @@ class StorePostRequest extends FormRequest
             'cover_image' => ['nullable', 'string', 'max:255'],
             'tag_ids' => ['nullable', 'array'],
             'tag_ids.*' => ['exists:tags,id'],
+            'author_id' => ['nullable', 'integer', 'exists:authors,user_id'],
         ];
     }
 }
