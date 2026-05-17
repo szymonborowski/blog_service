@@ -6,7 +6,7 @@ resources:
 
 images:
   - name: ghcr.io/szymonborowski/portfolio-blog
-    newTag: v1.16.0
+    newTag: v1.17.0
 
 patches:
   - target:
