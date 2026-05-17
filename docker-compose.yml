@@ -51,11 +51,7 @@ services:
       - ./src:/var/www/html
       - ./docker/dev/nginx/default.conf:/etc/nginx/conf.d/default.conf
     labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.blog.rule=Host(`blog.microservices.local`)"
-      - "traefik.http.routers.blog.entrypoints=websecure"
-      - "traefik.http.routers.blog.tls=true"
-      - "traefik.http.services.blog.loadbalancer.server.port=80"
+      - "traefik.enable=false"
     depends_on:
       blog-app:
         condition: service_started
@@ -125,7 +121,7 @@ services:
     ports:
       - "127.0.0.1:7700:7700"
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:7700/health"]
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:7700/health"]
       interval: 10s
       timeout: 5s
       retries: 5

@@ -9,6 +9,7 @@ return [
 
     'exchanges' => [
         'users' => env('RABBITMQ_EXCHANGE_USERS', 'users'),
+        'blog'  => env('RABBITMQ_EXCHANGE_BLOG', 'blog'),
     ],
 
     'queues' => [
